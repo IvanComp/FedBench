@@ -1,34 +1,16 @@
 version: '3'
-
 services:
+  raspberry:
+    build: .
+    environment:
+      - SERVER_ADDRESS=server:8080
+    deploy:
+      replicas: 10
+    depends_on:
+      - server
   server:
-    build: ./server
-    ports:
-      - "8080:8080"
-    networks:
-      - fl-net
-
-  client1:
-    build: ./client
-    networks:
-      - fl-net
-    depends_on:
-      - server
-
-  client2:
-    build: ./client
-    networks:
-      - fl-net
-    depends_on:
-      - server
-
-  client3:
-    build: ./client
-    networks:
-      - fl-net
-    depends_on:
-      - server
-
-networks:
-  fl-net:
-    driver: bridge
+    image: python:3.9-slim
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: python server.py
