@@ -1,20 +1,9 @@
-# Usa un'immagine base di Node.js
-FROM node:14
+FROM python:3.9-slim
 
-# Imposta la directory di lavoro
 WORKDIR /app
 
-# Copia i file package.json e package-lock.json
-COPY package*.json ./
+COPY ./server /app
 
-# Installa le dipendenze
-RUN npm install
+RUN pip install -r requirements.txt
 
-# Copia il resto dell'applicazione
-COPY . .
-
-# Espone la porta su cui l'applicazione sarà in ascolto
-EXPOSE 3000
-
-# Comando per avviare l'applicazione
-CMD ["node", "server.js"]
+CMD ["python", "server.py"]

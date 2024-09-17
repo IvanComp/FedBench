@@ -1,16 +1,34 @@
-version: '3.8'
+version: '3'
 
 services:
   server:
     build: ./server
     ports:
-      - "3000:3000"
+      - "8080:8080"
+    networks:
+      - fl-net
 
-  client:
+  client1:
     build: ./client
+    networks:
+      - fl-net
     depends_on:
       - server
-    environment:
-      - SERVER_URL=http://server:3000
-    deploy:
-      replicas: 10
+
+  client2:
+    build: ./client
+    networks:
+      - fl-net
+    depends_on:
+      - server
+
+  client3:
+    build: ./client
+    networks:
+      - fl-net
+    depends_on:
+      - server
+
+networks:
+  fl-net:
+    driver: bridge
