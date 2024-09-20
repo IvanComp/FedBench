@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  server:
+    build:
+      context: ./server
+    ports:
+      - "8080:8080"
+    networks:
+      - fl-network
+
+  client:
+    build:
+      context: ./client
+    depends_on:
+      - server
+    environment:
+      - CLIENT_ID=${CLIENT_ID}
+    networks:
+      - fl-network
+    deploy:
+      replicas: 1  
+
+networks:
+  fl-network:
+    driver: bridge

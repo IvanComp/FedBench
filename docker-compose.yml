@@ -1,16 +1,23 @@
-version: '3'
+version: '3.8'
+
 services:
-  raspberry:
-    build: .
-    environment:
-      - SERVER_ADDRESS=server:8080
-    deploy:
-      replicas: 10
+  server:
+    build: ./server
+    container_name: server
+    ports:
+      - "8080:8080"
+    networks:
+      - fl-net
+    volumes:
+      - ./server:/app
+  client:
+    image: lukechilds/dockerpi
+    networks:
+      - fl-net
     depends_on:
       - server
-  server:
-    image: python:3.9-slim
     volumes:
-      - .:/app
-    working_dir: /app
-    command: python server.py
+      - ./client:/app
+      
+networks:
+  fl-net:
