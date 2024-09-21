@@ -1,0 +1,20 @@
+# Dockerfile.client
+FROM python:3.9-slim
+
+# Imposta la variabile d'ambiente per evitare problemi con la bufferizzazione
+ENV PYTHONUNBUFFERED=1
+
+# Installazione delle librerie
+RUN pip install --no-cache-dir flwr[simulation] flwr-datasets[vision] torch torchvision matplotlib ray
+
+# Creazione della directory di lavoro
+WORKDIR /app
+
+# Copia del codice del client
+COPY client.py /app/client.py
+
+# Creazione della cartella per i dati 
+RUN mkdir -p data
+
+# Comando di esecuzione
+CMD ["python", "client.py"]

@@ -1,26 +1,36 @@
+# docker-compose.yml
 version: '3.8'
 
 services:
   server:
     build:
-      context: ./server
+      context: .
+      dockerfile: Dockerfile.server
+    container_name: flwr_server
     ports:
       - "8080:8080"
+    volumes:
+      - ./data:/app/data  # Mappa la cartella dei dati
+      - ./performance:/app/performance  # Mappa la cartella per i report
     networks:
-      - fl-network
+      - flwr_network
 
   client:
     build:
-      context: ./client
+      context: .
+      dockerfile: Dockerfile.client
     depends_on:
       - server
-    environment:
-      - CLIENT_ID=${CLIENT_ID}
     networks:
-      - fl-network
-    deploy:
-      replicas: 1  
+      - flwr_network
+    volumes:
+      - ./data:/app/data  # Condividi la cartella dei dati
+      - ./performance:/app/performance  # Opzionale: se i client devono accedere ai report
 
 networks:
-  fl-network:
+  flwr_network:
     driver: bridge
+
+volumes:
+  data:
+  performance:

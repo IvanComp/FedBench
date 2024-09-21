@@ -1,0 +1,23 @@
+# Dockerfile.server
+FROM python:3.9-slim
+
+# Imposta la variabile d'ambiente per evitare problemi con la bufferizzazione
+ENV PYTHONUNBUFFERED=1
+
+# Installazione delle librerie
+RUN pip install --no-cache-dir flwr[simulation] flwr-datasets[vision] torch torchvision matplotlib seaborn pandas ray
+
+# Creazione della directory di lavoro
+WORKDIR /app
+
+# Copia del codice del server
+COPY server.py /app/server.py
+
+# Esposizione della porta
+EXPOSE 8080
+
+# Creazione della cartella per i report
+RUN mkdir -p performance
+
+# Comando di esecuzione
+CMD ["python", "server.py"]
