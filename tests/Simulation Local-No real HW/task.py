@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from logging import INFO
+import time  # Aggiungiamo time per misurare i tempi di training
 
 import torch
 import torch.nn as nn
@@ -42,8 +43,12 @@ def load_data():
 
 
 def train(net, trainloader, valloader, epochs, device):
-    """Train the model on the training set."""
+    """Train the model on the training set, measuring time."""
     log(INFO, "Starting training...")
+
+    # Inizio misurazione tempo di training
+    start_time = time.time()
+
     net.to(device)  # move model to GPU if available
     criterion = torch.nn.CrossEntropyLoss().to(device)
     optimizer = torch.optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
@@ -56,6 +61,10 @@ def train(net, trainloader, valloader, epochs, device):
             loss.backward()
             optimizer.step()
 
+    # Fine misurazione tempo di training
+    training_time = time.time() - start_time
+    log(INFO, f"Training completed in {training_time:.2f} seconds")
+
     train_loss, train_acc = test(net, trainloader)
     val_loss, val_acc = test(net, valloader)
 
@@ -65,7 +74,8 @@ def train(net, trainloader, valloader, epochs, device):
         "val_loss": val_loss,
         "val_accuracy": val_acc,
     }
-    return results
+
+    return results, training_time  # Restituiamo anche il tempo di training
 
 
 def test(net, testloader):

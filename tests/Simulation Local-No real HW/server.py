@@ -3,6 +3,75 @@ from flwr.common import Metrics, ndarrays_to_parameters, Context
 from flwr.server import ServerApp, ServerConfig, ServerAppComponents
 from flwr.server.strategy import FedAvg
 from task import Net, get_weights
+import time
+import csv
+import os
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Crea la directory per i log delle performance
+performance_dir = './performance/'
+if not os.path.exists(performance_dir):
+    os.makedirs(performance_dir)
+
+# Inizializza il file CSV, sovrascrivendolo
+csv_file = performance_dir + 'performance.csv'
+if os.path.exists(csv_file):
+    os.remove(csv_file)  # Sovrascrivi il file precedente
+
+with open(csv_file, 'w', newline='') as file:
+    writer = csv.writer(file)
+    writer.writerow(['Client ID', 'Training Time', 'Communication Time', 'Total Time'])
+
+# Funzione per misurare e loggare il tempo di comunicazione
+def measure_communication_time(start_time, end_time):
+    communication_time = end_time - start_time
+    print(f"Communication time: {communication_time:.2f} seconds")
+    return communication_time
+
+# Funzione per loggare il tempo di ogni round
+def log_round_time(client_id, training_time, communication_time):
+    total_time = training_time + communication_time
+    print(f"CLIENT {client_id}: Round completed with total time {total_time:.2f} seconds")
+
+    # Salva i dati nel CSV
+    with open(csv_file, 'a', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow([client_id, training_time, communication_time, total_time])
+
+# Funzione per generare i grafici delle performance
+def generate_performance_graphs():
+    df = pd.read_csv(csv_file)
+
+    # Plot Training Time
+    plt.figure()
+    sns.barplot(x=df['Client ID'], y=df['Training Time'])
+    plt.title('Training Time per Client')
+    plt.xticks(rotation=45, ha="right")
+    plt.ylabel('Time (seconds)')
+    plt.tight_layout()
+    plt.savefig(performance_dir + 'training_time.png')
+
+    # Plot Communication Time
+    plt.figure()
+    sns.barplot(x=df['Client ID'], y=df['Communication Time'])
+    plt.title('Communication Time per Client')
+    plt.ylabel('Time (seconds)')
+    plt.xticks(rotation=45, ha="right")
+    plt.tight_layout()
+    plt.savefig(performance_dir + 'communication_time.png')
+
+    # Plot Total Time
+    plt.figure()
+    sns.barplot(x=df['Client ID'], y=df['Total Time'])
+    plt.title('Total Time per Client')
+    plt.ylabel('Time (seconds)')
+    plt.xticks(rotation=45, ha="right")
+    plt.tight_layout()
+    plt.savefig(performance_dir + 'total_time.png')
+
+    plt.show()
 
 # Define metric aggregation function
 def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
@@ -23,7 +92,6 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
         "val_loss": sum(val_losses) / sum(examples),
         "val_accuracy": sum(val_accuracies) / sum(examples),
     }
-
 
 # Initialize model parameters
 ndarrays = get_weights(Net())
@@ -50,8 +118,8 @@ app = ServerApp(server_fn=server_fn)
 if __name__ == "__main__":
     from flwr.server import start_server
 
-    start_server(
-        server_address="0.0.0.0:8080",
-        config=config,
-        strategy=strategy,
-    )
+    # Start the server
+    start_server(server_address="0.0.0.0:8080", config=ServerConfig(num_rounds=3))
+
+    # Genera i grafici alla fine dell'ultimo round
+    generate_performance_graphs()
