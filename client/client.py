@@ -1,3 +1,6 @@
+import multiprocessing
+multiprocessing.set_start_method('spawn')  # Imposta il metodo di start per il multiprocessing
+
 import numpy as np
 import torch
 import torch.nn as nn

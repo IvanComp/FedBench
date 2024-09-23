@@ -1,4 +1,3 @@
-# client.py
 import flwr as fl
 import torch
 import torch.nn as nn
@@ -8,6 +7,17 @@ import torchvision.transforms as transforms
 import time
 import os
 import logging
+import grpc
+from concurrent import futures
+import multiprocessing
+import multiprocessing
+
+# Imposta il metodo di multiprocessing su 'spawn' solo se non è già stato impostato
+try:
+    multiprocessing.set_start_method('spawn', force=True)  # Usa force=True per forzare il reset
+except RuntimeError:
+    # Il metodo di start è già stato impostato, puoi ignorare l'errore
+    pass
 
 # Configura il logging
 logging.basicConfig(level=logging.INFO)
@@ -49,7 +59,7 @@ def load_data(test=False):
         )
 
     loader = torch.utils.data.DataLoader(
-        dataset, batch_size=32, shuffle=True, num_workers=2
+        dataset, batch_size=32, shuffle=True, num_workers=2  # Impostato a 2 per ridurre il carico
     )
     return loader
 
@@ -105,60 +115,45 @@ class FlowerClient(fl.client.NumPyClient):
 
     def fit(self, parameters, config):
         logger.info("Inizio del processo di fitting.")
-        # Misurazione del tempo di comunicazione (ricezione dei pesi)
-        comm_start = time.time()
-        self.set_parameters(parameters)
-        comm_end = time.time()
-        communication_time = comm_end - comm_start
-        logger.info(f"Tempo di comunicazione (ricezione): {communication_time:.4f} secondi.")
-
-        # Misurazione del tempo di training
-        train_start = time.time()
-        train(self.net, self.trainloader, epochs=1)
-        train_end = time.time()
-        training_time = train_end - train_start
-        logger.info(f"Tempo di training: {training_time:.4f} secondi.")
-
-        # Misurazione del tempo di comunicazione (invio dei pesi)
-        comm_start_2 = time.time()
-        updated_parameters = self.get_parameters(config)
-        comm_end_2 = time.time()
-        communication_time += comm_end_2 - comm_start_2
-        logger.info(f"Tempo di comunicazione (invio): {comm_end_2 - comm_start_2:.4f} secondi.")
-        logger.info(f"Tempo totale di comunicazione: {communication_time:.4f} secondi.")
-
-        # Restituzione dei tempi al server
-        return updated_parameters, len(self.trainloader.dataset), {
-            "training_time": training_time,
-            "communication_time": communication_time
-        }
+        try:
+            self.set_parameters(parameters)
+            train(self.net, self.trainloader, epochs=1)
+            updated_parameters = self.get_parameters(config)
+            return updated_parameters, len(self.trainloader.dataset), {}
+        except Exception as e:
+            logger.error(f"Errore durante il fitting: {e}")
+            raise
 
     def evaluate(self, parameters, config):
         logger.info("Inizio del processo di valutazione.")
         self.set_parameters(parameters)
         loss, accuracy = test(self.net, self.testloader)
-        logger.info(f"Valutazione completata: Loss={loss:.4f}, Accuracy={accuracy:.4f}")
         return float(loss), len(self.testloader.dataset), {"accuracy": float(accuracy)}
 
 def main():
+    # Limita il numero di worker gRPC
+    grpc_server = grpc.server(futures.ThreadPoolExecutor(max_workers=4))
+
     # Crea un'istanza del client Flower
     client = FlowerClient()
+
+    # Aggiungi un ritardo per evitare che tutti i client inizino nello stesso momento
+    time.sleep(2)
+
     # Avvia il client e connettiti al server
-    logger.info("Avvio del client Flower e connessione al server.")
     fl.client.start_client(
-        server_address="flwr_server:8080",  # Nome corretto del servizio Docker
-        client=client.to_client()  # Utilizza .to_client() per convertire in Client
+        server_address="flwr_server:8080",
+        client=client.to_client()
     )
-    logger.info("Client Flower avviato correttamente.")
 
 if __name__ == "__main__":
     max_retries = 5
     for i in range(max_retries):
         try:
             main()
-            break  # Se la connessione ha successo, esci dal ciclo
+            break
         except Exception as e:
             logger.error(f"Tentativo {i+1}/{max_retries}: Errore nella connessione al server: {e}")
-            time.sleep(5)  # Attendi 5 secondi prima di riprovare
+            time.sleep(5)
     else:
         logger.critical("Impossibile connettersi al server dopo diversi tentativi.")
