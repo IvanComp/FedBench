@@ -51,11 +51,11 @@ def main():
     strategy = SaveMetricsStrategy()
 
     # Limita i thread di gRPC
-    grpc_server = grpc.server(futures.ThreadPoolExecutor(max_workers=4))
+    grpc_server = grpc.server(futures.ThreadPoolExecutor(max_workers=2))
 
     # Start server
     fl.server.start_server(
-        server_address="[::]:8080",
+        server_address="0.0.0.0:8080",
         config=fl.server.ServerConfig(num_rounds=3, round_timeout=120),  # Timeout ridotto
         strategy=strategy
     )
