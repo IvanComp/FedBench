@@ -7,8 +7,16 @@ import time
 import csv
 import os
 import pandas as pd
+import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
+
+# Imposta il backend non interattivo di matplotlib
+matplotlib.use('Agg')
+
+# Variabile globale per tenere traccia del round corrente
+currentRnd = 0
+num_rounds = 2  # Numero totale di round
 
 # Crea la directory per i log delle performance
 performance_dir = './performance/'
@@ -44,37 +52,29 @@ def log_round_time(client_id, training_time, communication_time):
 def generate_performance_graphs():
     df = pd.read_csv(csv_file)
 
-    # Plot Training Time
-    plt.figure()
-    sns.barplot(x=df['Client ID'], y=df['Training Time'])
-    plt.title('Training Time per Client')
-    plt.xticks(rotation=45, ha="right")
+    plt.figure(figsize=(10, 6))
+
+    # Crea gli istogrammi per Training Time, Communication Time e Total Time
+    df_melted = df.melt(id_vars=["Client ID"],
+                        value_vars=["Training Time", "Communication Time", "Total Time"],
+                        var_name="Metric",
+                        value_name="Time (seconds)")
+
+    sns.barplot(x="Metric", y="Time (seconds)", hue="Client ID", data=df_melted)
+
+    # Titolo e layout
+    plt.title('Performance Metrics per Client')
     plt.ylabel('Time (seconds)')
     plt.tight_layout()
-    plt.savefig(performance_dir + 'training_time.png')
 
-    # Plot Communication Time
-    plt.figure()
-    sns.barplot(x=df['Client ID'], y=df['Communication Time'])
-    plt.title('Communication Time per Client')
-    plt.ylabel('Time (seconds)')
-    plt.xticks(rotation=45, ha="right")
-    plt.tight_layout()
-    plt.savefig(performance_dir + 'communication_time.png')
-
-    # Plot Total Time
-    plt.figure()
-    sns.barplot(x=df['Client ID'], y=df['Total Time'])
-    plt.title('Total Time per Client')
-    plt.ylabel('Time (seconds)')
-    plt.xticks(rotation=45, ha="right")
-    plt.tight_layout()
-    plt.savefig(performance_dir + 'total_time.png')
-
-    plt.show()
+    # Salva il grafico
+    plt.savefig(performance_dir + 'performance_metrics.png')
+    #plt.show
 
 # Define metric aggregation function
 def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
+    global currentRnd  # Dichiarazione esplicita della variabile globale
+
     examples = [num_examples for num_examples, _ in metrics]
 
     # Multiply accuracy of each client by number of examples used
@@ -84,6 +84,12 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
     ]
     val_losses = [num_examples * m["val_loss"] for num_examples, m in metrics]
     val_accuracies = [num_examples * m["val_accuracy"] for num_examples, m in metrics]
+
+    currentRnd += 1
+
+    # Se siamo nell'ultimo round, genera i grafici
+    if currentRnd == num_rounds:
+        generate_performance_graphs()
 
     # Aggregate and return custom metric (weighted average)
     return {
@@ -97,9 +103,8 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
 ndarrays = get_weights(Net())
 parameters = ndarrays_to_parameters(ndarrays)
 
-
 def server_fn(context: Context):
-    server_config = ServerConfig(num_rounds=3)
+    server_config = ServerConfig(num_rounds=num_rounds)
     strategy = FedAvg(
         fraction_fit=1.0,  # Select all available clients
         fraction_evaluate=0.0,  # Disable evaluation
@@ -113,13 +118,9 @@ def server_fn(context: Context):
     )
 
 app = ServerApp(server_fn=server_fn)
-
 # Legacy mode
 if __name__ == "__main__":
     from flwr.server import start_server
 
     # Start the server
-    start_server(server_address="0.0.0.0:8080", config=ServerConfig(num_rounds=3))
-
-    # Genera i grafici alla fine dell'ultimo round
-    generate_performance_graphs()
+    start_server(server_address="0.0.0.0:8080", config=ServerConfig(num_rounds=num_rounds))
