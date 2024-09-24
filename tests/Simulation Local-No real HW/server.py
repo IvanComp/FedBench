@@ -52,7 +52,7 @@ def log_round_time(client_id, training_time, communication_time):
 def generate_performance_graphs():
     df = pd.read_csv(csv_file)
 
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(20, 12))
 
     # Crea gli istogrammi per Training Time, Communication Time e Total Time
     df_melted = df.melt(id_vars=["Client ID"],

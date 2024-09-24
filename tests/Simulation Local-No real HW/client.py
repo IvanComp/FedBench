@@ -32,18 +32,31 @@ class FlowerClient(NumPyClient):
     def fit(self, parameters, config):
         print(f"CLIENT {self.client_id}: Starting training...", flush=True)  # Log con il PID del client
 
-        # Set weights and measure training time
+        # Misura il tempo di comunicazione iniziale (ricezione dei parametri dal server)
+        comm_start_time = time.time()
+
+        # Set weights e misura il tempo di training
         set_weights(net, parameters)
         results, training_time = train(net, trainloader, testloader, epochs=1, device=DEVICE)
+
+        # Misura il tempo di comunicazione finale (completamento del ciclo di allenamento)
+        comm_end_time = time.time()
+
+        # Calcola il communication time
+        communication_time = comm_end_time - comm_start_time
 
         # Logging del tempo di training
         print(f"CLIENT {self.client_id}: Training completed in {training_time:.2f} seconds", flush=True)
 
+        # Logging del tempo di comunicazione
+        print(f"CLIENT {self.client_id}: Communication time: {communication_time:.2f} seconds", flush=True)
+
+        total_time = training_time + communication_time
 
         # Append timing data to CSV
         with open(csv_file, 'a', newline='') as file:
             writer = csv.writer(file)
-            writer.writerow([self.client_id, training_time, 0, training_time])  # Assuming communication time is 0 for now
+            writer.writerow([self.client_id, training_time, communication_time, total_time])
 
         # Return weights and size
         return get_weights(net), len(trainloader.dataset), results
