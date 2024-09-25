@@ -18,7 +18,7 @@ if os.path.exists(csv_file):
 
 with open(csv_file, 'w', newline='') as file:
     writer = csv.writer(file)
-    writer.writerow(['Client ID', 'Training Time', 'Communication Time', 'Total Time'])
+    writer.writerow(['Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Time'])
 
 # Load model and data (simple CNN, CIFAR-10)
 net = Net().to(DEVICE)
@@ -26,8 +26,8 @@ trainloader, testloader = load_data()
 
 # Define FlowerClient and client_fn
 class FlowerClient(NumPyClient):
-    def __init__(self):
-        self.client_id = os.getpid()  # Usa il PID come identificativo del client
+    def __init__(self, cid):
+        self.client_id = cid
 
     def fit(self, parameters, config):
         print(f"CLIENT {self.client_id}: Starting training...", flush=True)  # Log con il PID del client
@@ -56,7 +56,7 @@ class FlowerClient(NumPyClient):
         # Append timing data to CSV
         with open(csv_file, 'a', newline='') as file:
             writer = csv.writer(file)
-            writer.writerow([self.client_id, training_time, communication_time, total_time])
+            writer.writerow([self.client_id, 0, training_time, communication_time, total_time])
 
         # Return weights and size
         return get_weights(net), len(trainloader.dataset), results
@@ -70,8 +70,8 @@ class FlowerClient(NumPyClient):
 
 
 def client_fn(context: Context):
-    """Crea e restituisci un'istanza di Flower Client."""
-    return FlowerClient().to_client()
+    cid = context.node_id  # Flower dovrebbe fornire questo nel Context
+    return FlowerClient(cid)
 
 
 # Flower ClientApp usando client_fn
@@ -83,5 +83,5 @@ if __name__ == "__main__":
 
     start_client(
         server_address="127.0.0.1:8080",
-        client=FlowerClient().to_client(),
+        client=FlowerClient(cid="0").to_client(),
     )

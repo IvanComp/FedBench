@@ -31,7 +31,7 @@ if os.path.exists(csv_file):
 
 with open(csv_file, 'w', newline='') as file:
     writer = csv.writer(file)
-    writer.writerow(['Client ID', 'Training Time', 'Communication Time', 'Total Time'])
+    writer.writerow(['Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Time'])
 
 # Funzione per misurare e loggare il tempo di comunicazione
 def measure_communication_time(start_time, end_time):
