@@ -5,7 +5,7 @@ FROM python:3.9-slim
 ENV PYTHONUNBUFFERED=1
 
 # Installazione delle librerie
-RUN pip install --no-cache-dir flwr[simulation] flwr-datasets[vision] torch torchvision matplotlib seaborn pandas ray grpcio
+RUN pip install --no-cache-dir flwr==1.8.0 flwr-datasets[vision] torch torchvision matplotlib seaborn pandas ray grpcio
 
 # Creazione della directory di lavoro
 WORKDIR /app

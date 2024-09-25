@@ -5,9 +5,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+import multiprocessing
+import logging
 
-from concurrent import futures
-import grpc
+multiprocessing.set_start_method('spawn', force=True)
+logging.basicConfig(level=logging.INFO)
 
 # Definizione della strategia personalizzata
 class SaveMetricsStrategy(fl.server.strategy.FedAvg):
@@ -50,12 +52,9 @@ class SaveMetricsStrategy(fl.server.strategy.FedAvg):
 def main():
     strategy = SaveMetricsStrategy()
 
-    # Limita i thread di gRPC
-    grpc_server = grpc.server(futures.ThreadPoolExecutor(max_workers=2))
-
     # Start server
     fl.server.start_server(
-        server_address="0.0.0.0:8080",
+        server_address="flwr_server:8080",
         config=fl.server.ServerConfig(num_rounds=3, round_timeout=120),  # Timeout ridotto
         strategy=strategy
     )

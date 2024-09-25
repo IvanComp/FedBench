@@ -4,21 +4,10 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
-import time
-import os
 import logging
-import grpc
-from concurrent import futures
-import multiprocessing
 import multiprocessing
 
-# Imposta il metodo di multiprocessing su 'spawn' solo se non è già stato impostato
-try:
-    multiprocessing.set_start_method('spawn', force=True)  # Usa force=True per forzare il reset
-except RuntimeError:
-    # Il metodo di start è già stato impostato, puoi ignorare l'errore
-    pass
-
+multiprocessing.set_start_method('spawn', force=True)
 # Configura il logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -131,14 +120,8 @@ class FlowerClient(fl.client.NumPyClient):
         return float(loss), len(self.testloader.dataset), {"accuracy": float(accuracy)}
 
 def main():
-    # Limita il numero di worker gRPC
-    grpc_server = grpc.server(futures.ThreadPoolExecutor(max_workers=4))
-
     # Crea un'istanza del client Flower
     client = FlowerClient()
-
-    # Aggiungi un ritardo per evitare che tutti i client inizino nello stesso momento
-    time.sleep(2)
 
     # Avvia il client e connettiti al server
     fl.client.start_client(
@@ -154,6 +137,5 @@ if __name__ == "__main__":
             break
         except Exception as e:
             logger.error(f"Tentativo {i+1}/{max_retries}: Errore nella connessione al server: {e}")
-            time.sleep(5)
     else:
         logger.critical("Impossibile connettersi al server dopo diversi tentativi.")
