@@ -1,141 +1,103 @@
-import flwr as fl
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import torchvision
-import torchvision.transforms as transforms
-import logging
-import multiprocessing
+from flwr.client import ClientApp, NumPyClient
+from flwr.common import Context  # Importa il tipo Context
+import time
+import csv
+import os
+import hashlib  # Importa hashlib per il hashing
 
-multiprocessing.set_start_method('spawn', force=True)
-# Configura il logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from task import DEVICE, Net, get_weights, load_data, set_weights, train, test
 
-# Definizione del modello
-class Net(nn.Module):
-    def __init__(self):
-        super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(3, 6, 5)
-        self.pool = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(6, 16, 5)
-        self.fc1 = nn.Linear(16 * 5 * 5, 120)
-        self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 10)
+# Crea la directory per i log delle performance
+performance_dir = './performance/'
+# Crea la directory se non esiste
+os.makedirs(performance_dir, exist_ok=True)
 
-    def forward(self, x):
-        x = self.pool(torch.relu(self.conv1(x)))
-        x = self.pool(torch.relu(self.conv2(x)))
-        x = x.view(-1, 16 * 5 * 5)
-        x = torch.relu(self.fc1(x))
-        x = torch.relu(self.fc2(x))
-        x = self.fc3(x)
-        return x
+# Definisci il percorso del file CSV
+csv_file = os.path.join(performance_dir, 'performance.csv')
 
-# Caricamento dei dati
-def load_data(test=False):
-    transform = transforms.Compose(
-        [transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))]
-    )
+with open(csv_file, 'w', newline='') as file:
+    writer = csv.writer(file)
+    writer.writerow(['Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Time'])
 
-    if test:
-        dataset = torchvision.datasets.CIFAR10(
-            root='./data', train=False, download=True, transform=transform
-        )
-    else:
-        dataset = torchvision.datasets.CIFAR10(
-            root='./data', train=True, download=True, transform=transform
-        )
+# Carica modello e dati (simple CNN, CIFAR-10)
+net = Net().to(DEVICE)
+trainloader, testloader = load_data()
 
-    loader = torch.utils.data.DataLoader(
-        dataset, batch_size=32, shuffle=True, num_workers=2  # Impostato a 2 per ridurre il carico
-    )
-    return loader
-
-# Funzione di training
-def train(net, trainloader, epochs=1):
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
-    net.train()
-    for epoch in range(epochs):
-        logger.info(f"Inizio epoch {epoch+1}")
-        for inputs, labels in trainloader:
-            optimizer.zero_grad()
-            outputs = net(inputs)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
-    logger.info("Training completato.")
-
-# Funzione di valutazione
-def test(net, testloader):
-    criterion = nn.CrossEntropyLoss()
-    net.eval()
-    correct, total, loss = 0, 0, 0.0
-    with torch.no_grad():
-        for inputs, labels in testloader:
-            outputs = net(inputs)
-            loss += criterion(outputs, labels).item()
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
-    accuracy = correct / total
-    logger.info(f"Test completato. Loss: {loss:.4f}, Accuracy: {accuracy:.4f}")
-    return loss, accuracy
-
-# Implementazione del client Flower
-class FlowerClient(fl.client.NumPyClient):
-    def __init__(self):
-        self.net = Net()
-        self.trainloader = load_data(test=False)
-        self.testloader = load_data(test=True)
-        logger.info("Client inizializzato con successo.")
-
-    def get_parameters(self, config):
-        logger.info("Richiesta dei parametri dal server.")
-        return [val.cpu().numpy() for _, val in self.net.state_dict().items()]
-
-    def set_parameters(self, parameters):
-        logger.info("Impostazione dei parametri ricevuti dal server.")
-        params_dict = zip(self.net.state_dict().keys(), parameters)
-        state_dict = {k: torch.tensor(v) for k, v in params_dict}
-        self.net.load_state_dict(state_dict, strict=True)
-        logger.info("Parametri impostati con successo.")
+# Definisci FlowerClient e client_fn
+class FlowerClient(NumPyClient):
+    def __init__(self, cid):
+        self.cid = cid
 
     def fit(self, parameters, config):
-        logger.info("Inizio del processo di fitting.")
-        try:
-            self.set_parameters(parameters)
-            train(self.net, self.trainloader, epochs=1)
-            updated_parameters = self.get_parameters(config)
-            return updated_parameters, len(self.trainloader.dataset), {}
-        except Exception as e:
-            logger.error(f"Errore durante il fitting: {e}")
-            raise
+        print(f"CLIENT {self.cid}: Starting training...", flush=True)  # Log con il PID del client
+
+        # Misura il tempo di comunicazione iniziale (ricezione dei parametri dal server)
+        comm_start_time = time.time()
+
+        # Set weights e misura il tempo di training
+        set_weights(net, parameters)
+        results, training_time = train(net, trainloader, testloader, epochs=1, device=DEVICE)
+
+        # Misura il tempo di comunicazione finale (completamento del ciclo di allenamento)
+        comm_end_time = time.time()
+
+        # Calcola il communication time
+        communication_time = comm_end_time - comm_start_time
+
+        # Logging del tempo di training
+        print(f"CLIENT {self.cid}: Training completed in {training_time:.2f} seconds", flush=True)
+
+        # Logging del tempo di comunicazione
+        print(f"CLIENT {self.cid}: Communication time: {communication_time:.2f} seconds", flush=True)
+
+        total_time = training_time + communication_time
+
+        # Append timing data to CSV
+        with open(csv_file, 'a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow([self.cid, 0, training_time, communication_time, total_time])
+
+        # Return weights, size of training data, and results
+        return get_weights(net), len(trainloader.dataset), results
 
     def evaluate(self, parameters, config):
-        logger.info("Inizio del processo di valutazione.")
-        self.set_parameters(parameters)
-        loss, accuracy = test(self.net, self.testloader)
-        return float(loss), len(self.testloader.dataset), {"accuracy": float(accuracy)}
+        print(f"CLIENT {self.cid}: Starting evaluation...", flush=True)  # Log con il PID del client
+        set_weights(net, parameters)
+        loss, accuracy = test(net, testloader)
+        print(f"CLIENT {self.cid}: Evaluation completed", flush=True)
+        return loss, len(testloader.dataset), {"accuracy": accuracy}
 
-def main():
-    # Crea un'istanza del client Flower
-    client = FlowerClient()
+def client_fn(context: Context):
+    original_cid = context.node_id  # Flower dovrebbe fornire questo nel Context
 
-    # Avvia il client e connettiti al server
-    fl.client.start_client(
-        server_address="flwr_server:8080",
-        client=client.to_client()
-    )
+    # Assicurati che original_cid sia una stringa
+    original_cid_str = str(original_cid)
 
+    # Utilizza un hash MD5 e tronca a 4 caratteri per ridurre la lunghezza di cid
+    hash_object = hashlib.md5(original_cid_str.encode())
+    cid = hash_object.hexdigest()[:4]  # Tronca a 4 caratteri
+
+    return FlowerClient(cid=cid).to_client()
+
+# Flower ClientApp usando client_fn
+app = ClientApp(client_fn=client_fn)
+
+# Legacy mode
 if __name__ == "__main__":
-    max_retries = 5
-    for i in range(max_retries):
-        try:
-            main()
-            break
-        except Exception as e:
-            logger.error(f"Tentativo {i+1}/{max_retries}: Errore nella connessione al server: {e}")
-    else:
-        logger.critical("Impossibile connettersi al server dopo diversi tentativi.")
+    from flwr.client import start_client
+
+    # Esempio di ID originale (puoi sostituirlo con il tuo metodo di generazione)
+    original_cid = "1234567890"  # Sostituisci con il tuo metodo di generazione dell'ID originale
+
+    # Assicurati che original_cid sia una stringa
+    original_cid_str = str(original_cid)
+
+    # Utilizza un hash MD5 e tronca a 4 caratteri
+    hash_object = hashlib.md5(original_cid_str.encode())
+    cid = hash_object.hexdigest()[:4]  # Tronca a 4 caratteri, ad esempio "1a2b"
+
+    # Avvia il client Flower
+    start_client(
+        server_address="flwr_server:8080",
+        client=FlowerClient(cid=cid).to_client(),
+    )

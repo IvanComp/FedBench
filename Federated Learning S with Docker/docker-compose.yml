@@ -23,8 +23,8 @@ services:
     volumes:
       - ./data:/app/data
       - ./performance:/app/performance
-    environment:
-      - GRPC_ENABLE_FORK_SUPPORT=0
+    #environment:
+    #  - GRPC_ENABLE_FORK_SUPPORT=0
 
 networks:
   flwr_network:
