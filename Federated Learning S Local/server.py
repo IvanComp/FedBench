@@ -17,7 +17,7 @@ matplotlib.use('Agg')
 
 # Variabile globale per tenere traccia del round corrente
 currentRnd = 0
-num_rounds = 2  # Numero totale di round
+num_rounds = 3  # Numero totale di round
 
 # Ottieni il percorso assoluto della directory corrente
 current_dir = os.path.abspath(os.path.dirname(__file__))
@@ -92,6 +92,9 @@ def generate_performance_graphs():
     num_clients = len(unique_clients)
     df = df.reset_index(drop=True)  # Assicurati che l'indice sia sequenziale
     df['FL Round'] = (df.index // num_clients) + 1
+
+    df[['Training Time', 'Communication Time', 'Total Time']] = df[
+        ['Training Time', 'Communication Time', 'Total Time']].round(2)
 
     # Scrivi le modifiche sul file CSV
     df.to_csv(csv_file, index=False)
