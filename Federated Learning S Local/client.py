@@ -54,13 +54,10 @@ class FlowerClient(NumPyClient):
 
         total_time = training_time + communication_time
 
-        # Recupera il numero del round FL, se disponibile
-        fl_round = config.get("fl_round", 0)
-
         # Append timing data to CSV
         with open(csv_file, 'a', newline='') as file:
             writer = csv.writer(file)
-            writer.writerow([self.cid, fl_round, training_time, communication_time, total_time])
+            writer.writerow([self.cid, 0, training_time, communication_time, total_time])
 
         # Return weights, size of training data, and results
         return get_weights(net), len(trainloader.dataset), results
@@ -82,7 +79,7 @@ def client_fn(context: Context):
     hash_object = hashlib.md5(original_cid_str.encode())
     cid = hash_object.hexdigest()[:4]  # Tronca a 4 caratteri
 
-    return FlowerClient(cid=cid)
+    return FlowerClient(cid=cid).to_client()
 
 # Flower ClientApp usando client_fn
 app = ClientApp(client_fn=client_fn)

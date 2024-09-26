@@ -19,15 +19,24 @@ matplotlib.use('Agg')
 currentRnd = 0
 num_rounds = 2  # Numero totale di round
 
+# Ottieni il percorso assoluto della directory corrente
+current_dir = os.path.abspath(os.path.dirname(__file__))
+
 # Crea la directory per i log delle performance
-performance_dir = './performance/'
+performance_dir = os.path.join(current_dir, 'performance')
 if not os.path.exists(performance_dir):
     os.makedirs(performance_dir)
 
+# Definisci il percorso del file CSV
+csv_file = os.path.join(performance_dir, 'performance.csv')
+
 # Inizializza il file CSV, sovrascrivendolo
-csv_file = performance_dir + 'performance.csv'
 if os.path.exists(csv_file):
-    os.remove(csv_file)  # Sovrascrivi il file precedente
+    try:
+        os.remove(csv_file)
+        print(f"File '{csv_file}' rimosso con successo.")
+    except OSError as e:
+        print(f"Errore nella rimozione del file: {e}")
 
 with open(csv_file, 'w', newline='') as file:
     writer = csv.writer(file)
@@ -40,37 +49,78 @@ def measure_communication_time(start_time, end_time):
     return communication_time
 
 # Funzione per loggare il tempo di ogni round
-def log_round_time(client_id, training_time, communication_time):
+def log_round_time(client_id, fl_round, training_time, communication_time):
     total_time = training_time + communication_time
-    print(f"CLIENT {client_id}: Round completed with total time {total_time:.2f} seconds")
+    print(f"CLIENT {client_id}: Round {fl_round} completed with total time {total_time:.2f} seconds")
 
     # Salva i dati nel CSV
     with open(csv_file, 'a', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow([client_id, training_time, communication_time, total_time])
+        writer.writerow([client_id, fl_round, training_time, communication_time, total_time])
 
-# Funzione per generare i grafici delle performance
 def generate_performance_graphs():
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    import os
+
+    # Verifica che il file CSV esista
+    if not os.path.isfile(csv_file):
+        raise FileNotFoundError(f"Il file CSV '{csv_file}' non esiste.")
+
+    # Leggi il file CSV
     df = pd.read_csv(csv_file)
+
+    # Verifica che le colonne necessarie esistano
+    required_columns = ['Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Time']
+    if not all(column in df.columns for column in required_columns):
+        raise ValueError(f"Il file CSV deve contenere le colonne: {required_columns}")
+
+    # Mappa gli ID dei client a "client 1", "client 2", ecc.
+    unique_clients = df['Client ID'].unique()
+    client_mapping = {original_id: f"client {i + 1}" for i, original_id in enumerate(unique_clients)}
+
+    # Debug: stampa la mappatura creata
+    print("Mappatura degli ID dei client:")
+    for original, mapped in client_mapping.items():
+        print(f"{original} -> {mapped}")
+
+    # Applica la mappatura al DataFrame
+    df['Client ID'] = df['Client ID'].map(client_mapping)
+
+    # Sovrascrivi la colonna 'FL Round' con valori incrementali a partire da 1
+    num_clients = len(unique_clients)
+    df = df.reset_index(drop=True)  # Assicurati che l'indice sia sequenziale
+    df['FL Round'] = (df.index // num_clients) + 1
+
+    # Scrivi le modifiche sul file CSV
+    df.to_csv(csv_file, index=False)
+    print(f"File CSV aggiornato e salvato in '{csv_file}'.")
 
     plt.figure(figsize=(12, 6))
 
     # Crea gli istogrammi per Training Time, Communication Time e Total Time
-    df_melted = df.melt(id_vars=["Client ID"],
-                        value_vars=["Training Time", "Communication Time", "Total Time"],
-                        var_name="Metric",
-                        value_name="Time (seconds)")
+    df_melted = df.melt(
+        id_vars=["Client ID"],
+        value_vars=["Training Time", "Communication Time", "Total Time"],
+        var_name="Metric",
+        value_name="Time (seconds)"
+    )
 
     sns.barplot(x="Metric", y="Time (seconds)", hue="Client ID", data=df_melted)
 
     # Titolo e layout
     plt.title('Performance Metrics per Client')
     plt.ylabel('Time (seconds)')
+    plt.xlabel('Metric')
+    plt.legend(title='Client ID')
     plt.tight_layout()
 
     # Salva il grafico
-    plt.savefig(performance_dir + 'performance_metrics.png')
-    #plt.show
+    graph_path = os.path.join(performance_dir, 'performance_metrics.png')
+    plt.savefig(graph_path)
+    plt.close()
+    print(f"Grafico salvato in '{graph_path}'.")
 
 # Define metric aggregation function
 def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
@@ -78,7 +128,7 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
 
     examples = [num_examples for num_examples, _ in metrics]
 
-    # Multiply accuracy of each client by number of examples used
+    # Moltiplica la precisione di ogni client per il numero di esempi usati
     train_losses = [num_examples * m["train_loss"] for num_examples, m in metrics]
     train_accuracies = [
         num_examples * m["train_accuracy"] for num_examples, m in metrics
@@ -92,7 +142,7 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
     if currentRnd == num_rounds:
         generate_performance_graphs()
 
-    # Aggregate and return custom metric (weighted average)
+    # Aggrega e ritorna le metriche personalizzate (media ponderata)
     return {
         "train_loss": sum(train_losses) / sum(examples),
         "train_accuracy": sum(train_accuracies) / sum(examples),
@@ -107,8 +157,8 @@ parameters = ndarrays_to_parameters(ndarrays)
 def server_fn(context: Context):
     server_config = ServerConfig(num_rounds=num_rounds)
     strategy = FedAvg(
-        fraction_fit=1.0,  # Select all available clients
-        fraction_evaluate=0.0,  # Disable evaluation
+        fraction_fit=1.0,  # Seleziona tutti i client disponibili
+        fraction_evaluate=0.0,  # Disabilita la valutazione
         min_available_clients=2,
         fit_metrics_aggregation_fn=weighted_average,
         initial_parameters=parameters,
@@ -119,6 +169,7 @@ def server_fn(context: Context):
     )
 
 app = ServerApp(server_fn=server_fn)
+
 # Legacy mode
 if __name__ == "__main__":
     from flwr.server import start_server
