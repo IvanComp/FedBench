@@ -1,23 +1,23 @@
 # Dockerfile.client
 FROM python:3.12-slim
 
-# Imposta la variabile d'ambiente per evitare problemi con la bufferizzazione
+# Set the environment variable to avoid buffering issues
 ENV PYTHONUNBUFFERED=1
 
-# Installazione delle librerie
+# Installation of the libraries
 RUN pip install flwr[simulations] flwr-datasets[vision] torch==2.2.1 torchvision==0.17.1 ray==2.36.0 grpcio==1.66.1 numpy==1.26.2
 
-# Creazione della directory di lavoro
+# Create the working directory
 WORKDIR /app
 
-# Copia del codice del client
+# Copy the client code
 COPY client.py /app/client.py
 COPY server.py /app/server.py
 COPY performance/ /app/performance/
 COPY data/ /app/data/
 
-# Creazione della cartella per i dati 
+# Create the folder for data
 RUN mkdir -p data
 
-# Comando di esecuzione
+# Execution command
 CMD ["python", "client.py"]

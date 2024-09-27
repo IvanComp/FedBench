@@ -12,48 +12,48 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import uuid
 
-# Imposta il backend non interattivo di matplotlib
+# Set the non-interactive backend of matplotlib
 matplotlib.use('Agg')
 
-# Variabile globale per tenere traccia del round corrente
+# Global variable to keep track of the current round
 currentRnd = 0
-num_rounds = 3  # Numero totale di round
+num_rounds = 10  # Total number of rounds
 
-# Ottieni il percorso assoluto della directory corrente
+# Get the absolute path of the current directory
 current_dir = os.path.abspath(os.path.dirname(__file__))
 
-# Crea la directory per i log delle performance
+# Create the directory for performance logs
 performance_dir = os.path.join(current_dir, 'performance')
 if not os.path.exists(performance_dir):
     os.makedirs(performance_dir)
 
-# Definisci il percorso del file CSV
+# Define the path of the CSV file
 csv_file = os.path.join(performance_dir, 'performance.csv')
 
-# Inizializza il file CSV, sovrascrivendolo
+# Initialize the CSV file, overwriting it
 if os.path.exists(csv_file):
     try:
         os.remove(csv_file)
-        print(f"File '{csv_file}' rimosso con successo.")
+        print(f"File '{csv_file}' successfully removed.")
     except OSError as e:
-        print(f"Errore nella rimozione del file: {e}")
+        print(f"Error removing the file: {e}")
 
 with open(csv_file, 'w', newline='') as file:
     writer = csv.writer(file)
     writer.writerow(['Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Time'])
 
-# Funzione per misurare e loggare il tempo di comunicazione
+# Function to measure and log communication time
 def measure_communication_time(start_time, end_time):
     communication_time = end_time - start_time
     print(f"Communication time: {communication_time:.2f} seconds")
     return communication_time
 
-# Funzione per loggare il tempo di ogni round
+# Function to log the time of each round
 def log_round_time(client_id, fl_round, training_time, communication_time):
     total_time = training_time + communication_time
     print(f"CLIENT {client_id}: Round {fl_round} completed with total time {total_time:.2f} seconds")
 
-    # Salva i dati nel CSV
+    # Save the data in the CSV
     with open(csv_file, 'a', newline='') as file:
         writer = csv.writer(file)
         writer.writerow([client_id, fl_round, training_time, communication_time, total_time])
@@ -64,45 +64,45 @@ def generate_performance_graphs():
     import seaborn as sns
     import os
 
-    # Verifica che il file CSV esista
+    # Check that the CSV file exists
     if not os.path.isfile(csv_file):
-        raise FileNotFoundError(f"Il file CSV '{csv_file}' non esiste.")
+        raise FileNotFoundError(f"The CSV file '{csv_file}' does not exist.")
 
-    # Leggi il file CSV
+    # Read the CSV file
     df = pd.read_csv(csv_file)
 
-    # Verifica che le colonne necessarie esistano
+    # Check that the required columns exist
     required_columns = ['Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Time']
     if not all(column in df.columns for column in required_columns):
-        raise ValueError(f"Il file CSV deve contenere le colonne: {required_columns}")
+        raise ValueError(f"The CSV file must contain the columns: {required_columns}")
 
-    # Mappa gli ID dei client a "client 1", "client 2", ecc.
+    # Map client IDs to "client 1", "client 2", etc.
     unique_clients = df['Client ID'].unique()
     client_mapping = {original_id: f"client {i + 1}" for i, original_id in enumerate(unique_clients)}
 
-    # Debug: stampa la mappatura creata
-    print("Mappatura degli ID dei client:")
+    # Debug: print the created mapping
+    print("Client ID mapping:")
     for original, mapped in client_mapping.items():
         print(f"{original} -> {mapped}")
 
-    # Applica la mappatura al DataFrame
+    # Apply the mapping to the DataFrame
     df['Client ID'] = df['Client ID'].map(client_mapping)
 
-    # Sovrascrivi la colonna 'FL Round' con valori incrementali a partire da 1
+    # Overwrite the 'FL Round' column with incremental values starting from 1
     num_clients = len(unique_clients)
-    df = df.reset_index(drop=True)  # Assicurati che l'indice sia sequenziale
+    df = df.reset_index(drop=True)  # Ensure the index is sequential
     df['FL Round'] = (df.index // num_clients) + 1
 
     df[['Training Time', 'Communication Time', 'Total Time']] = df[
         ['Training Time', 'Communication Time', 'Total Time']].round(2)
 
-    # Scrivi le modifiche sul file CSV
+    # Write the changes to the CSV file
     df.to_csv(csv_file, index=False)
-    print(f"File CSV aggiornato e salvato in '{csv_file}'.")
+    print(f"CSV file updated and saved at '{csv_file}'.")
 
     plt.figure(figsize=(12, 6))
 
-    # Crea gli istogrammi per Training Time, Communication Time e Total Time
+    # Create histograms for Training Time, Communication Time, and Total Time
     df_melted = df.melt(
         id_vars=["Client ID"],
         value_vars=["Training Time", "Communication Time", "Total Time"],
@@ -112,26 +112,26 @@ def generate_performance_graphs():
 
     sns.barplot(x="Metric", y="Time (seconds)", hue="Client ID", data=df_melted)
 
-    # Titolo e layout
+    # Title and layout
     plt.title('Performance Metrics per Client')
     plt.ylabel('Time (seconds)')
     plt.xlabel('Metric')
     plt.legend(title='Client ID')
     plt.tight_layout()
 
-    # Salva il grafico
+    # Save the graph
     graph_path = os.path.join(performance_dir, 'performance_metrics.png')
     plt.savefig(graph_path)
     plt.close()
-    print(f"Grafico salvato in '{graph_path}'.")
+    print(f"Graph saved at '{graph_path}'.")
 
 # Define metric aggregation function
 def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
-    global currentRnd  # Dichiarazione esplicita della variabile globale
+    global currentRnd  # Explicit declaration of the global variable
 
     examples = [num_examples for num_examples, _ in metrics]
 
-    # Moltiplica la precisione di ogni client per il numero di esempi usati
+    # Multiply the accuracy of each client by the number of examples used
     train_losses = [num_examples * m["train_loss"] for num_examples, m in metrics]
     train_accuracies = [
         num_examples * m["train_accuracy"] for num_examples, m in metrics
@@ -141,11 +141,11 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
 
     currentRnd += 1
 
-    # Se siamo nell'ultimo round, genera i grafici
+    # If we are in the last round, generate the graphs
     if currentRnd == num_rounds:
         generate_performance_graphs()
 
-    # Aggrega e ritorna le metriche personalizzate (media ponderata)
+    # Aggregate and return custom metrics (weighted average)
     return {
         "train_loss": sum(train_losses) / sum(examples),
         "train_accuracy": sum(train_accuracies) / sum(examples),
@@ -160,8 +160,8 @@ parameters = ndarrays_to_parameters(ndarrays)
 def server_fn(context: Context):
     server_config = ServerConfig(num_rounds=num_rounds)
     strategy = FedAvg(
-        fraction_fit=1.0,  # Seleziona tutti i client disponibili
-        fraction_evaluate=0.0,  # Disabilita la valutazione
+        fraction_fit=1.0,  # Select all available clients
+        fraction_evaluate=0.0,  # Disable evaluation
         min_available_clients=2,
         fit_metrics_aggregation_fn=weighted_average,
         initial_parameters=parameters,
