@@ -4,6 +4,7 @@ import time
 import csv
 import os
 import hashlib  # Import hashlib for hashing
+from APClient import ClientRegistry  # Importing ClientRegistry
 
 from task import DEVICE, Net, get_weights, load_data, set_weights, train, test
 
@@ -21,6 +22,9 @@ with open(csv_file, 'w', newline='') as file:
     writer = csv.writer(file)
     writer.writerow(['Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Time'])
 
+# Initialize the client registry
+client_registry = ClientRegistry()
+
 # Load model and data (simple CNN, CIFAR-10)
 net = Net().to(DEVICE)
 trainloader, testloader = load_data()
@@ -29,9 +33,12 @@ trainloader, testloader = load_data()
 class FlowerClient(NumPyClient):
     def __init__(self, cid):
         self.cid = cid
+        # Register the client with the registry
+        self.resources = {"cpu": "2 cores", "ram": "4GB"}  # Example resource information
+        client_registry.register_client(self.cid, self.resources)
 
     def fit(self, parameters, config):
-        print(f"CLIENT {self.cid}: Starting training...", flush=True)  # Log with the client PID
+        print(f"CLIENT {self.cid}: Starting training.", flush=True)  # Log with the client PID
 
         # Measure the initial communication time (receiving parameters from the server)
         comm_start_time = time.time()
@@ -59,15 +66,23 @@ class FlowerClient(NumPyClient):
             writer = csv.writer(file)
             writer.writerow([self.cid, 0, training_time, communication_time, total_time])
 
+        # Update client status in the registry
+        client_registry.update_client(self.cid, True)
+
         # Return weights, size of training data, and results
         return get_weights(net), len(trainloader.dataset), results
 
     def evaluate(self, parameters, config):
-        print(f"CLIENT {self.cid}: Starting evaluation...", flush=True)  # Log with the client PID
+        print(f"CLIENT {self.cid}: Starting evaluation.", flush=True)  # Log with the client PID
         set_weights(net, parameters)
         loss, accuracy = test(net, testloader)
         print(f"CLIENT {self.cid}: Evaluation completed", flush=True)
         return loss, len(testloader.dataset), {"accuracy": accuracy}
+
+    def on_disconnect(self):
+        # Handle disconnection
+        client_registry.remove_client(self.cid)
+
 
 def client_fn(context: Context):
     original_cid = context.node_id  # Flower should provide this in the Context
@@ -96,7 +111,7 @@ if __name__ == "__main__":
 
     # Use an MD5 hash and truncate to 4 characters
     hash_object = hashlib.md5(original_cid_str.encode())
-    cid = hash_object.hexdigest()[:4]  # Truncate to 4 characters, e.g., "1a2b"
+    cid = hash_object.hexdigest()[:4]  # Truncate to 4 characters, e.g. "1a2b"
 
     # Start the Flower client
     start_client(
