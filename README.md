@@ -1,16 +1,39 @@
-# AP-for-FL
+# Architectural Pattern for Federated Learning Systems
 
-This is the repository for testing the performance of a Federated Learning environment.
+<p align="center">
+<img src="img/ArchitectureEval.svg" width="300px" height="150px"/>
+</p>
 
-## To run Local Simulation:
+This is the repository for testing the performance of a Federated Learning system applying custom specifications.
+
+# Table of contents
+<!--ts-->
+   * [Functionalities](#functionalities)
+   * [How to run](#how-to-run)
+   * [References](#references)
+   
+# Functionalities
+
+This repository is divided in two main folders:
+
+- __Federated Learning without using Architectural Patterns/__:
+
+- __Federated Learning using Architectural Patterns/__: Using clients architectural patterns.
+
+
+# How To Run:
+
+In both folders, you can use the following commands:
+
+## To run the Simulation Locally:
 
 In the Federated Learning S Local folder, enter the following command:
 
 ```bash
-flower-simulation --server-app server:app --client-app client:app --num-supernodes 2
+flower-simulation --server-app server:app --client-app client:app --num-supernodes 2 --backend-config {}
 ```
 
-Change the number of clients by modifying the number after supernodes
+Change the **number of clients** by modifying the number after supernodes or add variables to **backend-config** to customize clients using a JSON schema e.g ‘{“<keyA>”:<value>, “<keyB>”:<value>}’
 
 ## To run the Simulation on Docker containers:
 
@@ -23,3 +46,8 @@ docker-compose up --scale client=10
 Change the number of clients by modifying the number of client
 
 
+# References
+
+[1] Sin Kit Lo, Qinghua Lu, Liming Zhu, Hye-Young Paik, Xiwei Xu, Chen Wang,
+**Architectural patterns for the design of federated learning systems**,
+Journal of Systems and Software, Volume 191, 2022, 111357.
