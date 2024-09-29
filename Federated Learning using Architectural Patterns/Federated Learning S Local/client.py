@@ -4,6 +4,7 @@ import time
 import csv
 import os
 import hashlib  # Import hashlib for hashing
+import psutil  # CPU
 from APClient import ClientRegistry  # Importing ClientRegistry
 
 from task import DEVICE, Net, get_weights, load_data, set_weights, train, test
@@ -20,7 +21,7 @@ if os.path.exists(csv_file):
 
 with open(csv_file, 'w', newline='') as file:
     writer = csv.writer(file)
-    writer.writerow(['Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Time'])
+    writer.writerow(['Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Time', 'CPU Usage (%)'])
 
 # Initialize the client registry
 client_registry = ClientRegistry()
@@ -33,43 +34,36 @@ trainloader, testloader = load_data()
 class FlowerClient(NumPyClient):
     def __init__(self, cid):
         self.cid = cid
-        # Register the client with the registry
-        self.resources = {}  # Example resource information
+        self.resources = {}
         client_registry.register_client(self.cid, self.resources)
 
     def fit(self, parameters, config):
-        print(f"CLIENT {self.cid}: Starting training.", flush=True)  # Log with the client PID
+        print(f"CLIENT {self.cid}: Starting training.", flush=True)
 
-        # Measure the initial communication time (receiving parameters from the server)
+        # Monitoraggio iniziale della CPU
+        cpu_start = psutil.cpu_percent(interval=None)  # Ottieni l'utilizzo della CPU prima del training
+
         comm_start_time = time.time()
-
-        # Set weights and measure training time
         set_weights(net, parameters)
         results, training_time = train(net, trainloader, testloader, epochs=1, device=DEVICE)
-
-        # Measure the final communication time (completion of the training cycle)
         comm_end_time = time.time()
 
-        # Calculate the communication time
+        # Monitoraggio finale della CPU
+        cpu_end = psutil.cpu_percent(interval=None)  # Ottieni l'utilizzo della CPU dopo il training
+
+        # Calcola la differenza media di utilizzo della CPU
+        cpu_usage = (cpu_start + cpu_end) / 2
+
+        # Calcola i tempi
         communication_time = comm_end_time - comm_start_time
-
-        # Log the training time
-        print(f"CLIENT {self.cid}: Training completed in {training_time:.2f} seconds", flush=True)
-
-        # Log the communication time
-        print(f"CLIENT {self.cid}: Communication time: {communication_time:.2f} seconds", flush=True)
-
         total_time = training_time + communication_time
 
-        # Append timing data to CSV
+        # Append dati CPU e tempi al CSV
         with open(csv_file, 'a', newline='') as file:
             writer = csv.writer(file)
-            writer.writerow([self.cid, 0, training_time, communication_time, total_time])
+            writer.writerow([self.cid, 0, training_time, communication_time, total_time, cpu_usage])
 
-        # Update client status in the registry
         client_registry.update_client(self.cid, True)
-
-        # Return weights, size of training data, and results
         return get_weights(net), len(trainloader.dataset), results
 
     def evaluate(self, parameters, config):
@@ -82,7 +76,6 @@ class FlowerClient(NumPyClient):
     def on_disconnect(self):
         # Handle disconnection
         client_registry.remove_client(self.cid)
-
 
 def client_fn(context: Context):
     original_cid = context.node_id  # Flower should provide this in the Context

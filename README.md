@@ -1,7 +1,7 @@
 # Architectural Pattern for Federated Learning Systems
 
 <p align="center">
-<img src="img/ArchitectureEval.png" width="300px" height="150px"/>
+<img src="img/ArchitectureEval.png" width="650px" height="350px"/>
 </p>
 
 This is the repository for testing the performance of a Federated Learning system applying custom specifications.
