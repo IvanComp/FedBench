@@ -17,7 +17,7 @@ matplotlib.use('Agg')
 
 # Global variable to keep track of the current round
 currentRnd = 0
-num_rounds = 10  # Total number of rounds
+num_rounds = 2  # Total number of rounds
 
 # Get the absolute path of the current directory
 current_dir = os.path.abspath(os.path.dirname(__file__))

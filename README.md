@@ -14,11 +14,13 @@ This is the repository for testing the performance of a Federated Learning syste
    
 # Functionalities
 
+The Federated Learning system is supported by [Flower](https://github.com/adap/flower) framework. 
+
 This repository is divided in two main folders:
 
-- __Federated Learning without using Architectural Patterns/__:
+- __Federated Learning without using Architectural Patterns/__
 
-- __Federated Learning using Architectural Patterns/__: Using clients architectural patterns.
+- __Federated Learning using Architectural Patterns/__: Using the Client Manager Architectural Design Patterns.
 
 
 # How To Run:
@@ -43,7 +45,7 @@ In the Federated Learning S with Docker folder, enter the following command:
 docker-compose up --scale client=10
 ```
 
-Change the number of clients by modifying the number of client
+Change the number of clients by modifying the value of the "client" variable.
 
 
 # References

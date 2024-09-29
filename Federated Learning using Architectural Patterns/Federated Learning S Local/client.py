@@ -34,7 +34,7 @@ class FlowerClient(NumPyClient):
     def __init__(self, cid):
         self.cid = cid
         # Register the client with the registry
-        self.resources = {"cpu": "2 cores", "ram": "4GB"}  # Example resource information
+        self.resources = {}  # Example resource information
         client_registry.register_client(self.cid, self.resources)
 
     def fit(self, parameters, config):
