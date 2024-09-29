@@ -15,16 +15,15 @@ from APClient import ClientRegistry  # Import the ClientRegistry
 
 # Set the non-interactive backend of matplotlib
 matplotlib.use('Agg')
+# Get the absolute path of the current directory
+current_dir = os.path.abspath(os.path.dirname(__file__))
 
 # Initialize the client registry
 client_registry = ClientRegistry()
 
 # Global variable to keep track of the current round
 currentRnd = 0
-num_rounds = 2  # Total number of rounds
-
-# Get the absolute path of the current directory
-current_dir = os.path.abspath(os.path.dirname(__file__))
+num_rounds = 8  # Total number of rounds
 
 # Create the directory for performance logs
 performance_dir = os.path.join(current_dir, 'performance')
@@ -32,7 +31,7 @@ if not os.path.exists(performance_dir):
     os.makedirs(performance_dir)
 
 # Define the path of the CSV file
-csv_file = os.path.join(performance_dir, 'performance.csv')
+csv_file = os.path.join(performance_dir, 'FLwithAP_performance_metrics.csv')
 
 # Initialize the CSV file, overwriting it
 if os.path.exists(csv_file):

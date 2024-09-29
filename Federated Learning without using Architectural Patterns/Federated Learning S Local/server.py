@@ -17,7 +17,7 @@ matplotlib.use('Agg')
 
 # Global variable to keep track of the current round
 currentRnd = 0
-num_rounds = 2  # Total number of rounds
+num_rounds = 8  # Total number of rounds
 
 # Get the absolute path of the current directory
 current_dir = os.path.abspath(os.path.dirname(__file__))
@@ -28,7 +28,7 @@ if not os.path.exists(performance_dir):
     os.makedirs(performance_dir)
 
 # Define the path of the CSV file
-csv_file = os.path.join(performance_dir, 'performance.csv')
+csv_file = os.path.join(performance_dir, 'FL_performance_metrics.csv')
 
 # Initialize the CSV file, overwriting it
 if os.path.exists(csv_file):

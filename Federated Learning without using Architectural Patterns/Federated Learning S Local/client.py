@@ -13,7 +13,7 @@ if not os.path.exists(performance_dir):
     os.makedirs(performance_dir)
 
 # Initialize the CSV file, overwriting it
-csv_file = os.path.join(performance_dir, 'performance.csv')
+csv_file = os.path.join(performance_dir, 'FL_performance_metrics.csv')
 if os.path.exists(csv_file):
     os.remove(csv_file)  # Overwrite the previous file
 
