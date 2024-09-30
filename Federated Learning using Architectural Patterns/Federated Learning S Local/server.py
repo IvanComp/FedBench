@@ -28,25 +28,19 @@ currentRnd = 0
 num_rounds = 2  # Total number of rounds
 
 # Create the directory for performance logs
-performance_dir = os.path.join(current_dir, 'performance')
+performance_dir = './performance/'
 if not os.path.exists(performance_dir):
     os.makedirs(performance_dir)
 
-# Define the path of the CSV file
+# Inizializza il file CSV, sovrascrivendo eventuali file esistenti
 csv_file = os.path.join(performance_dir, 'FLwithAP_performance_metrics.csv')
-
-# Initialize the CSV file, overwriting it
 if os.path.exists(csv_file):
-    try:
-        os.remove(csv_file)
-        print(f"File '{csv_file}' successfully removed.")
-    except OSError as e:
-        print(f"Error removing the file: {e}")
+    os.remove(csv_file)
 
 with open(csv_file, 'w', newline='') as file:
     writer = csv.writer(file)
-    writer.writerow(
-        ['Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Time', 'CPU Usage (%)'])  # Added CPU Usage
+    writer.writerow(['Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Time', 'CPU Usage (%)'])
+
 
 
 # Function to measure and log communication time
@@ -71,6 +65,7 @@ def log_round_time(client_id, fl_round, training_time, communication_time, cpu_u
     # Update the client in the registry
     client_registry.update_client(client_id, True)
 
+import seaborn as sns
 
 # Function to generate performance graphs
 def generate_performance_graphs():
@@ -180,10 +175,15 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
     val_losses = [num_examples * m["val_loss"] for num_examples, m in metrics]
     val_accuracies = [num_examples * m["val_accuracy"] for num_examples, m in metrics]
 
-    # Raccogli le informazioni dei client dalle metriche
+    # Raccogli le informazioni dei client dalle metriche e scrivi nel CSV
     for _, m in metrics:
         client_id = m.get("client_id")
+        training_time = m.get("training_time")
+        communication_time = m.get("communication_time")
+        total_time = m.get("total_time")
+        cpu_usage = m.get("cpu_usage")
         system_info_json = m.get("system_info")
+
         if client_id and system_info_json:
             # Deserializza system_info
             system_info = json.loads(system_info_json)
@@ -191,6 +191,11 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
             client_registry.register_client(client_id, {})
             client_registry.registry[client_id]['system_info'] = system_info
             client_registry.registry[client_id]['last_update'] = datetime.now()
+
+            # Scrivi le metriche nel CSV
+            with open(csv_file, 'a', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow([client_id, currentRnd + 1, training_time, communication_time, total_time, cpu_usage])
 
     currentRnd += 1
 
@@ -208,7 +213,6 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
         "val_loss": sum(val_losses) / sum(examples),
         "val_accuracy": sum(val_accuracies) / sum(examples),
     }
-
 
 # Initialize model parameters
 ndarrays = get_weights(Net())

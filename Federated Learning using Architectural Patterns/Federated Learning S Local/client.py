@@ -85,7 +85,7 @@ class FlowerClient(NumPyClient):
         }
 
         return get_weights(net), len(trainloader.dataset), metrics
-    
+
     def evaluate(self, parameters, config):
         print(f"CLIENT {self.cid}: Starting evaluation.", flush=True)
         set_weights(net, parameters)
