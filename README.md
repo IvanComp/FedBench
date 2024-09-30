@@ -32,7 +32,7 @@ In both folders, you can use the following commands:
 In the Federated Learning S Local folder, enter the following command:
 
 ```bash
-flower-simulation --server-app server:app --client-app client:app --num-supernodes 2 --backend-config {}
+flower-simulation --server-app server:app --client-app client:app --num-supernodes 2 
 ```
 
 Change the **number of clients** by modifying the number after supernodes or add variables to **backend-config** to customize clients using a JSON schema e.g ‘{“<keyA>”:<value>, “<keyB>”:<value>}’

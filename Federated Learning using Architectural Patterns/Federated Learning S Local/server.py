@@ -10,16 +10,18 @@ import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
-import uuid
-from APClient import ClientRegistry  # Import the ClientRegistry
+from APClient import ClientRegistry
+import platform
+import psutil
+from datetime import datetime
+import json
+
+client_registry = ClientRegistry()
 
 # Set the non-interactive backend of matplotlib
 matplotlib.use('Agg')
 # Get the absolute path of the current directory
 current_dir = os.path.abspath(os.path.dirname(__file__))
-
-# Initialize the client registry
-client_registry = ClientRegistry()
 
 # Global variable to keep track of the current round
 currentRnd = 0
@@ -70,11 +72,8 @@ def log_round_time(client_id, fl_round, training_time, communication_time, cpu_u
     client_registry.update_client(client_id, True)
 
 
-import seaborn as sns
-
-
+# Function to generate performance graphs
 def generate_performance_graphs():
-    # Imposta il tema "whitegrid" per i grafici a barre
     sns.set_theme(style="ticks")
 
     df = pd.read_csv(csv_file)
@@ -86,8 +85,7 @@ def generate_performance_graphs():
     num_clients = len(unique_clients)
     df = df.reset_index(drop=True)
     df['FL Round'] = (df.index // num_clients) + 1
-    df[['Training Time', 'Communication Time', 'Total Time']] = df[
-        ['Training Time', 'Communication Time', 'Total Time']].round(2)
+    df[['Training Time', 'Communication Time', 'Total Time']] = df[['Training Time', 'Communication Time', 'Total Time']].round(2)
     df.to_csv(csv_file, index=False)
 
     plt.figure(figsize=(12, 6))
@@ -104,8 +102,8 @@ def generate_performance_graphs():
     plt.close()
 
 
+# Function to generate CPU usage graph
 def generate_cpu_usage_graph():
-
     sns.set_theme(style="ticks")
     df = pd.read_csv(csv_file)
 
@@ -114,41 +112,15 @@ def generate_cpu_usage_graph():
     plt.title('CPU Usage per Client', fontweight='bold')
     plt.ylabel('CPU Usage (%)', fontweight='bold')
     plt.xlabel('Client ID', fontweight='bold')
-    plt.legend(title='Client ID', title_fontsize='13', fontsize='10', loc='best', frameon=True)
     plt.tight_layout()
 
-    cpu_graph_path = os.path.join(performance_dir, 'cpu_clients_usage.pdf')
-    plt.savefig(cpu_graph_path, format="pdf")
-    plt.close()
-
-
-def generate_cpu_usage_graph():
-    sns.set_theme(style="ticks")
-    df = pd.read_csv(csv_file)
-    # Define the figure size
-    plt.figure(figsize=(12, 6))
-
-    # Create an empty bar to represent 100% CPU usage
-    sns.barplot(x="Client ID", y=[100] * len(df), color='white', data=df, edgecolor='black')
-    # Create a filled bar on top to show the actual CPU usage
-    sns.barplot(x="Client ID", y="CPU Usage (%)", data=df, color='lightblue', label="Used CPU", edgecolor='black')
-    # Set titles and labels
-    plt.title('CPU Usage per Client', fontweight='bold')
-    plt.ylabel('CPU Usage (%)', fontweight='bold')
-    plt.xlabel('Client ID', fontweight='bold')
-
-    # Add a legend to explain the chart
-    plt.legend(title='CPU Usage', title_fontsize='13', fontsize='10', loc='best', frameon=True)
-    plt.tight_layout()
-
-    # Save the chart as a PDF
     cpu_graph_path = os.path.join(performance_dir, 'cpu_usage_per_client.pdf')
     plt.savefig(cpu_graph_path, format="pdf")
     plt.close()
 
 
+# Function to generate total time graph
 def generate_total_time_graph():
-
     sns.set_theme(style="ticks")
     df = pd.read_csv(csv_file)
 
@@ -157,9 +129,6 @@ def generate_total_time_graph():
     plt.title('Total Time per Round per Client', fontweight='bold')
     plt.ylabel('Total Time (seconds)', fontweight='bold')
     plt.xlabel('FL Round', fontweight='bold')
-    rounds = df['FL Round'].unique()
-    plt.xticks(ticks=rounds, labels=[int(r) for r in rounds], fontweight='bold')
-    plt.legend(title='Client ID', title_fontsize='13', fontsize='10', loc='best', frameon=True)
     plt.tight_layout()
 
     line_graph_path = os.path.join(performance_dir, 'totalTime_round.pdf')
@@ -167,8 +136,8 @@ def generate_total_time_graph():
     plt.close()
 
 
+# Function to generate training time graph
 def generate_training_time_graph():
-
     sns.set_theme(style="ticks")
     df = pd.read_csv(csv_file)
 
@@ -177,9 +146,6 @@ def generate_training_time_graph():
     plt.title('Training Time per Round per Client', fontweight='bold')
     plt.ylabel('Training Time (seconds)', fontweight='bold')
     plt.xlabel('FL Round', fontweight='bold')
-    rounds = df['FL Round'].unique()
-    plt.xticks(ticks=rounds, labels=[int(r) for r in rounds], fontweight='bold')
-    plt.legend(title='Client ID', title_fontsize='13', fontsize='10', loc='best', frameon=True)
     plt.tight_layout()
 
     line_graph_path = os.path.join(performance_dir, 'trainingTime_round.pdf')
@@ -187,8 +153,8 @@ def generate_training_time_graph():
     plt.close()
 
 
+# Function to generate communication time graph
 def generate_communication_time_graph():
-
     sns.set_theme(style="ticks")
     df = pd.read_csv(csv_file)
 
@@ -197,9 +163,6 @@ def generate_communication_time_graph():
     plt.title('Communication Time per Round per Client', fontweight='bold')
     plt.ylabel('Communication Time (seconds)', fontweight='bold')
     plt.xlabel('FL Round', fontweight='bold')
-    rounds = df['FL Round'].unique()
-    plt.xticks(ticks=rounds, labels=[int(r) for r in rounds], fontweight='bold')
-    plt.legend(title='Client ID', title_fontsize='13', fontsize='10', loc='best', frameon=True)
     plt.tight_layout()
 
     line_graph_path = os.path.join(performance_dir, 'communicationTime_round.pdf')
@@ -212,23 +175,33 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
 
     examples = [num_examples for num_examples, _ in metrics]
 
-    # Multiply the accuracy of each client by the number of examples used
     train_losses = [num_examples * m["train_loss"] for num_examples, m in metrics]
     train_accuracies = [num_examples * m["train_accuracy"] for num_examples, m in metrics]
     val_losses = [num_examples * m["val_loss"] for num_examples, m in metrics]
     val_accuracies = [num_examples * m["val_accuracy"] for num_examples, m in metrics]
 
+    # Raccogli le informazioni dei client dalle metriche
+    for _, m in metrics:
+        client_id = m.get("client_id")
+        system_info_json = m.get("system_info")
+        if client_id and system_info_json:
+            # Deserializza system_info
+            system_info = json.loads(system_info_json)
+
+            client_registry.register_client(client_id, {})
+            client_registry.registry[client_id]['system_info'] = system_info
+            client_registry.registry[client_id]['last_update'] = datetime.now()
+
     currentRnd += 1
 
-    # If we are in the last round, generate the graphs
     if currentRnd == num_rounds:
-        generate_performance_graphs()  # Bar chart of performance metrics
-        generate_cpu_usage_graph()  # Bar chart for CPU usage
-        generate_total_time_graph()  # Line chart for Total Time per round
-        generate_training_time_graph()  # Line chart for Training Time per round
-        generate_communication_time_graph()  # Line chart for Communication Time per round
+        generate_performance_graphs()
+        generate_cpu_usage_graph()
+        generate_total_time_graph()
+        generate_training_time_graph()
+        generate_communication_time_graph()
+        client_registry.print_clients_info()
 
-    # Aggregate and return custom metrics (weighted average)
     return {
         "train_loss": sum(train_losses) / sum(examples),
         "train_accuracy": sum(train_accuracies) / sum(examples),

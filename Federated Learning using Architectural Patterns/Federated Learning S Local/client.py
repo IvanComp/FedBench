@@ -1,30 +1,32 @@
 from flwr.client import ClientApp, NumPyClient
 from flwr.common import Context  # Import Context type
 import time
+from datetime import datetime
 import csv
 import os
 import hashlib  # Import hashlib for hashing
 import psutil  # CPU
-from APClient import ClientRegistry  # Importing ClientRegistry
+import platform
+import psutil
+from datetime import datetime
+import json
+
 
 from task import DEVICE, Net, get_weights, load_data, set_weights, train, test
 
-# Create the directory for performance logs
+# Creazione della directory per i log di performance
 performance_dir = './performance/'
 if not os.path.exists(performance_dir):
     os.makedirs(performance_dir)
 
-# Initialize the CSV file, overwriting it
+# Inizializzazione del file CSV, sovrascrivendo eventuali file esistenti
 csv_file = os.path.join(performance_dir, 'FLwithAP_performance_metrics.csv')
 if os.path.exists(csv_file):
-    os.remove(csv_file)  # Overwrite the previous file
+    os.remove(csv_file)
 
 with open(csv_file, 'w', newline='') as file:
     writer = csv.writer(file)
     writer.writerow(['Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Time', 'CPU Usage (%)'])
-
-# Initialize the client registry
-client_registry = ClientRegistry()
 
 # Load model and data (simple CNN, CIFAR-10)
 net = Net().to(DEVICE)
@@ -35,57 +37,68 @@ class FlowerClient(NumPyClient):
     def __init__(self, cid):
         self.cid = cid
         self.resources = {}
-        client_registry.register_client(self.cid, self.resources)
 
     def fit(self, parameters, config):
         print(f"CLIENT {self.cid}: Starting training.", flush=True)
-
-        # Monitoraggio iniziale della CPU
-        cpu_start = psutil.cpu_percent(interval=None)  # Ottieni l'utilizzo della CPU prima del training
+        cpu_start = psutil.cpu_percent(interval=None)
 
         comm_start_time = time.time()
         set_weights(net, parameters)
         results, training_time = train(net, trainloader, testloader, epochs=1, device=DEVICE)
         comm_end_time = time.time()
 
-        # Monitoraggio finale della CPU
-        cpu_end = psutil.cpu_percent(interval=None)  # Ottieni l'utilizzo della CPU dopo il training
-
-        # Calcola la differenza media di utilizzo della CPU
+        cpu_end = psutil.cpu_percent(interval=None)
         cpu_usage = (cpu_start + cpu_end) / 2
 
-        # Calcola i tempi
         communication_time = comm_end_time - comm_start_time
         total_time = training_time + communication_time
 
-        # Append dati CPU e tempi al CSV
-        with open(csv_file, 'a', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow([self.cid, 0, training_time, communication_time, total_time, cpu_usage])
+        # Raccogli le informazioni di sistema del client
+        system_info = {
+            "platform": platform.system(),
+            "platform_version": platform.version(),
+            "architecture": platform.machine(),
+            "cpu": platform.processor(),
+            "cpu_count": psutil.cpu_count(logical=False),
+            "cpu_threads": psutil.cpu_count(logical=True),
+            "ram_total": psutil.virtual_memory().total / (1024 ** 3),
+            "ram_available": psutil.virtual_memory().available / (1024 ** 3),
+            "python_version": platform.python_version(),
+            "cluster": 0,
+        }
 
-        client_registry.update_client(self.cid, True)
-        return get_weights(net), len(trainloader.dataset), results
+        # Serializza system_info in una stringa JSON
+        system_info_json = json.dumps(system_info)
 
+        # Prepara le metriche da inviare al server
+        metrics = {
+            "train_loss": results["train_loss"],
+            "train_accuracy": results["train_accuracy"],
+            "val_loss": results["val_loss"],
+            "val_accuracy": results["val_accuracy"],
+            "training_time": training_time,
+            "communication_time": communication_time,
+            "total_time": total_time,
+            "cpu_usage": cpu_usage,
+            "client_id": self.cid,
+            "system_info": system_info_json,  # Usa la stringa serializzata
+        }
+
+        return get_weights(net), len(trainloader.dataset), metrics
+    
     def evaluate(self, parameters, config):
-        print(f"CLIENT {self.cid}: Starting evaluation.", flush=True)  # Log with the client PID
+        print(f"CLIENT {self.cid}: Starting evaluation.", flush=True)
         set_weights(net, parameters)
         loss, accuracy = test(net, testloader)
         print(f"CLIENT {self.cid}: Evaluation completed", flush=True)
         return loss, len(testloader.dataset), {"accuracy": accuracy}
 
-    def on_disconnect(self):
-        # Handle disconnection
-        client_registry.remove_client(self.cid)
-
 def client_fn(context: Context):
-    original_cid = context.node_id  # Flower should provide this in the Context
-
-    # Ensure original_cid is a string
+    original_cid = context.node_id
     original_cid_str = str(original_cid)
 
-    # Use an MD5 hash and truncate to 4 characters to reduce the cid length
     hash_object = hashlib.md5(original_cid_str.encode())
-    cid = hash_object.hexdigest()[:4]  # Truncate to 4 characters
+    cid = hash_object.hexdigest()[:4]
 
     return FlowerClient(cid=cid).to_client()
 
@@ -96,17 +109,12 @@ app = ClientApp(client_fn=client_fn)
 if __name__ == "__main__":
     from flwr.client import start_client
 
-    # Example of original ID (you can replace this with your own generation method)
-    original_cid = "1234567890"  # Replace with your method of generating the original ID
-
-    # Ensure original_cid is a string
+    original_cid = "1234567890"
     original_cid_str = str(original_cid)
 
-    # Use an MD5 hash and truncate to 4 characters
     hash_object = hashlib.md5(original_cid_str.encode())
-    cid = hash_object.hexdigest()[:4]  # Truncate to 4 characters, e.g. "1a2b"
+    cid = hash_object.hexdigest()[:4]
 
-    # Start the Flower client
     start_client(
         server_address="127.0.0.1:8080",
         client=FlowerClient(cid=cid).to_client(),
