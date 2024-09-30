@@ -23,7 +23,7 @@ client_registry = ClientRegistry()
 
 # Global variable to keep track of the current round
 currentRnd = 0
-num_rounds = 8  # Total number of rounds
+num_rounds = 2  # Total number of rounds
 
 # Create the directory for performance logs
 performance_dir = os.path.join(current_dir, 'performance')
