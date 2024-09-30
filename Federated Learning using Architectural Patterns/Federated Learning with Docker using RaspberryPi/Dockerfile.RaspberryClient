@@ -1,0 +1,26 @@
+# Dockerfile.RaspberryClient
+FROM arm64v8/debian:latest
+
+# Install Python and pip
+RUN apt-get update && apt-get install -y python3 python3-pip python3-venv
+
+# Create a virtual environment
+RUN python3 -m venv /opt/venv
+
+# Activate the virtual environment and install the necessary libraries
+RUN /opt/venv/bin/pip install --upgrade pip
+RUN /opt/venv/bin/pip install flwr[simulations] flwr-datasets[vision] torch==2.2.1 torchvision==0.17.1 ray==2.36.0 grpcio==1.66.1 numpy==1.26.2
+
+# Create the working directory
+WORKDIR /app
+
+# Copy the client code
+COPY client.py /app/client.py
+COPY performance/ /app/performance/
+COPY data/ /app/data/
+
+# Create the folder for data
+RUN mkdir -p data
+
+# Execution command
+CMD ["/opt/venv/bin/python", "client.py"]

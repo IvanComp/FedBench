@@ -41,8 +41,6 @@ with open(csv_file, 'w', newline='') as file:
     writer = csv.writer(file)
     writer.writerow(['Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Time', 'CPU Usage (%)'])
 
-
-
 # Function to measure and log communication time
 def measure_communication_time(start_time, end_time):
     communication_time = end_time - start_time
