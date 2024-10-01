@@ -1,6 +1,3 @@
-# client.py
-
-# Import necessary libraries
 from flwr.client import ClientApp, NumPyClient
 from flwr.common import Context
 import time
@@ -16,6 +13,7 @@ from flwr.common.logger import log
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10
 from torchvision.transforms import Compose, Normalize, ToTensor
+import json
 
 # Definition of variables and constants
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -123,57 +121,73 @@ def set_weights(net, parameters):
     net.load_state_dict(state_dict, strict=True)
 
 # Flower client initialization
+# Define FlowerClient and client_fn
 class FlowerClient(NumPyClient):
     def __init__(self, cid):
         self.cid = cid
-        # Initialize the model and data loaders
-        self.net = Net().to(DEVICE)
-        self.trainloader, self.testloader = load_data()
+        self.resources = {}
 
     def fit(self, parameters, config):
-        print(f"CLIENT {self.cid}: Starting training...", flush=True)
-        # Measure the initial communication time (receiving parameters from the server)
+        print(f"CLIENT {self.cid}: Starting training.", flush=True)
+        cpu_start = psutil.cpu_percent(interval=None)
+
         comm_start_time = time.time()
-
-        # Set weights and measure training time
-        set_weights(self.net, parameters)
-        results, training_time = train(self.net, self.trainloader, self.testloader, epochs=1, device=DEVICE)
-
-        # Measure the final communication time (completion of the training cycle)
+        set_weights(net, parameters)
+        results, training_time = train(net, trainloader, testloader, epochs=1, device=DEVICE)
         comm_end_time = time.time()
 
-        # Calculate communication time
+        cpu_end = psutil.cpu_percent(interval=None)
+        cpu_usage = (cpu_start + cpu_end) / 2
+
         communication_time = comm_end_time - comm_start_time
-
-        # Log the training time
-        print(f"CLIENT {self.cid}: Training completed in {training_time:.2f} seconds", flush=True)
-
-        # Log the communication time
-        print(f"CLIENT {self.cid}: Communication time: {communication_time:.2f} seconds", flush=True)
-
         total_time = training_time + communication_time
 
-        # Append timing data to CSV (make sure the path is correct)
-        csv_file = './performance/performance.csv'
-        with open(csv_file, 'a', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow([self.cid, 0, training_time, communication_time, total_time])
+        # Raccogli le informazioni di sistema del client
+        system_info = {
+            "platform": platform.system(),
+            "platform_version": platform.version(),
+            "architecture": platform.machine(),
+            "cpu": platform.processor(),
+            "cpu_count": psutil.cpu_count(logical=False),
+            "cpu_threads": psutil.cpu_count(logical=True),
+            "ram_total": psutil.virtual_memory().total / (1024 ** 3),
+            "ram_available": psutil.virtual_memory().available / (1024 ** 3),
+            "python_version": platform.python_version(),
+        }
 
-        # Return updated weights, size of training data, and results
-        return get_weights(self.net), len(self.trainloader.dataset), results
+        # Serializza system_info in una stringa JSON
+        system_info_json = json.dumps(system_info)
+
+        # Prepara le metriche da inviare al server
+        metrics = {
+            "train_loss": results["train_loss"],
+            "train_accuracy": results["train_accuracy"],
+            "val_loss": results["val_loss"],
+            "val_accuracy": results["val_accuracy"],
+            "training_time": training_time,
+            "communication_time": communication_time,
+            "total_time": total_time,
+            "cpu_usage": cpu_usage,
+            "client_id": self.cid,
+            "system_info": system_info_json,  # Usa la stringa serializzata
+        }
+
+        return get_weights(net), len(trainloader.dataset), metrics
 
     def evaluate(self, parameters, config):
-        print(f"CLIENT {self.cid}: Starting evaluation...", flush=True)
-        set_weights(self.net, parameters)
-        loss, accuracy = test(self.net, self.testloader)
+        print(f"CLIENT {self.cid}: Starting evaluation.", flush=True)
+        set_weights(net, parameters)
+        loss, accuracy = test(net, testloader)
         print(f"CLIENT {self.cid}: Evaluation completed", flush=True)
-        return loss, len(self.testloader.dataset), {"accuracy": accuracy}
-
+        return loss, len(testloader.dataset), {"accuracy": accuracy}
+        
 def client_fn(context: Context):
     original_cid = context.node_id
     original_cid_str = str(original_cid)
+
     hash_object = hashlib.md5(original_cid_str.encode())
     cid = hash_object.hexdigest()[:4]
+
     return FlowerClient(cid=cid).to_client()
 
 # Flower ClientApp using client_fn
@@ -183,13 +197,12 @@ app = ClientApp(client_fn=client_fn)
 if __name__ == "__main__":
     from flwr.client import start_client
 
-    # Example of original ID (you can replace this with your own generation method)
     original_cid = "1234567890"
     original_cid_str = str(original_cid)
+
     hash_object = hashlib.md5(original_cid_str.encode())
     cid = hash_object.hexdigest()[:4]
 
-    # Start the Flower client
     start_client(
         server_address="server:8080",
         client=FlowerClient(cid=cid).to_client(),

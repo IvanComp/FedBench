@@ -61,18 +61,6 @@ def log_round_time(client_id, fl_round, training_time, communication_time, cpu_u
     # Aggiorna il registro del client
     client_registry.update_client(client_id, True)
 
-
-# Function to cluster clients based on their properties
-def cluster_clients(client_registry, num_clusters):
-    clusters = {letter: [] for letter in ['A', 'B']}  # Crea 3 cluster A, B, C
-
-    all_clients = client_registry.get_active_clients()
-    for cid, info in all_clients.items():
-        cluster = info['cluster']  # Prendi il cluster assegnato al client (A, B o C)
-        clusters[cluster].append(cid)
-
-    return clusters
-
 # Function to generate performance graphs
 def generate_performance_graphs():
     sns.set_theme(style="ticks")
@@ -102,7 +90,6 @@ def generate_performance_graphs():
     plt.savefig(graph_path, format="pdf")
     plt.close()
 
-
 # Function to generate CPU usage graph
 def generate_cpu_usage_graph():
     sns.set_theme(style="ticks")
@@ -118,7 +105,6 @@ def generate_cpu_usage_graph():
     cpu_graph_path = os.path.join(performance_dir, 'cpu_usage_per_client.pdf')
     plt.savefig(cpu_graph_path, format="pdf")
     plt.close()
-
 
 # Function to generate total time graph
 def generate_total_time_graph():
@@ -136,7 +122,6 @@ def generate_total_time_graph():
     plt.savefig(line_graph_path, format="pdf")
     plt.close()
 
-
 # Function to generate training time graph
 def generate_training_time_graph():
     sns.set_theme(style="ticks")
@@ -153,7 +138,6 @@ def generate_training_time_graph():
     plt.savefig(line_graph_path, format="pdf")
     plt.close()
 
-
 # Function to generate communication time graph
 def generate_communication_time_graph():
     sns.set_theme(style="ticks")
@@ -169,7 +153,6 @@ def generate_communication_time_graph():
     line_graph_path = os.path.join(performance_dir, 'communicationTime_round.pdf')
     plt.savefig(line_graph_path, format="pdf")
     plt.close()
-
 
 # Define metric aggregation function
 def weighted_average_global(metrics: List[Tuple[int, Metrics]]) -> Metrics:
@@ -222,12 +205,6 @@ def weighted_average_global(metrics: List[Tuple[int, Metrics]]) -> Metrics:
         "val_loss": sum(val_losses) / total_examples,
         "val_accuracy": sum(val_accuracies) / total_examples,
     }
-
-
-# Esegui clustering
-num_clusters = 3  # Definisci quanti cluster vuoi
-client_clusters = cluster_clients(client_registry, num_clusters)
-
 
 # Initialize model parameters
 ndarrays = get_weights(Net())

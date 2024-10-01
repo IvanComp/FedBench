@@ -5,6 +5,7 @@ from datetime import datetime
 class ClientRegistry:
     def __init__(self):
         self.registry = {}
+        
 
     def get_client_info(self):
 
@@ -49,6 +50,11 @@ class ClientRegistry:
             self.registry[cid]['active'] = status
             self.registry[cid]['last_update'] = last_update or datetime.now()
             print(f"Client {cid} status updated: {status}")
+
+    def get_client_cluster(self, cid):
+        """Restituisce il cluster di appartenenza di un client."""
+        client_info = self.get_client_info(cid)
+        return client_info["cluster"] if client_info else None
 
     def get_active_clients(self):
         """Returns the list of active clients."""
