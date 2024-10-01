@@ -19,6 +19,8 @@ import psutil
 from datetime import datetime
 import json
 
+client_registry = ClientRegistry()
+
 matplotlib.use('Agg')
 
 # Device configuration
@@ -52,30 +54,32 @@ def get_weights(net):
     ordered_state_dict = OrderedDict(sorted(state_dict.items()))
     return [val.cpu().numpy() for key, val in ordered_state_dict.items()]
 
-lient_registry = ClientRegistry()
+# Global variable to keep track of the current round
+currentRnd = 0
+num_rounds = 3  # Total number of rounds
 
-# Set the non-interactive backend of matplotlib
-matplotlib.use('Agg')
 # Get the absolute path of the current directory
 current_dir = os.path.abspath(os.path.dirname(__file__))
 
-# Global variable to keep track of the current round
-currentRnd = 0
-num_rounds = 2  # Total number of rounds
-
 # Create the directory for performance logs
-performance_dir = './performance/'
+performance_dir = os.path.join(current_dir, 'performance')
 if not os.path.exists(performance_dir):
     os.makedirs(performance_dir)
 
-# Inizializza il file CSV, sovrascrivendo eventuali file esistenti
-csv_file = os.path.join(performance_dir, 'FLwithAP_performance_metrics.csv')
+# Define the path of the CSV file
+csv_file = os.path.join(performance_dir, 'performance.csv')
+
+# Initialize the CSV file, overwriting it if it exists
 if os.path.exists(csv_file):
-    os.remove(csv_file)
+    try:
+        os.remove(csv_file)
+        print(f"File '{csv_file}' successfully removed.")
+    except OSError as e:
+        print(f"Error removing the file: {e}")
 
 with open(csv_file, 'w', newline='') as file:
     writer = csv.writer(file)
-    writer.writerow(['Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Time', 'CPU Usage (%)'])
+    writer.writerow(['Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Time'])
 
 # Function to measure and log communication time
 def measure_communication_time(start_time, end_time):
@@ -83,18 +87,16 @@ def measure_communication_time(start_time, end_time):
     print(f"Communication time: {communication_time:.2f} seconds")
     return communication_time
 
-
 # Function to log the time of each round
-def log_round_time(client_id, fl_round, training_time, communication_time, cpu_usage):
+def log_round_time(client_id, fl_round, training_time, communication_time):
     total_time = training_time + communication_time
-    print(f"CLIENT {client_id}: Round {fl_round} completed with total time {total_time:.2f} seconds and CPU usage {cpu_usage:.2f}%")
+    print(f"CLIENT {client_id}: Round {fl_round} completed with total time {total_time:.2f} seconds")
 
     # Save the data in the CSV
     with open(csv_file, 'a', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow([client_id, fl_round, training_time, communication_time, total_time, cpu_usage])  # Log CPU Usage
+        writer.writerow([client_id, fl_round, training_time, communication_time, total_time])
 
-    # Aggiorna il registro del client
     client_registry.update_client(client_id, True)
 
 def generate_performance_graphs():
@@ -240,6 +242,7 @@ def weighted_average_global(metrics: List[Tuple[int, Metrics]]) -> Metrics:
         "val_loss": sum(val_losses) / total_examples,
         "val_accuracy": sum(val_accuracies) / total_examples,
     }
+
 
 # Initialize model parameters
 net = Net()

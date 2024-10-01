@@ -11,6 +11,10 @@ services:
       - ./performance:/app/performance
     networks:
       - flwr_network
+    deploy:
+      resources:
+        limits:
+          cpus: '1'   # Limita l'uso della CPU a 2 core
 
   client:
     build:
@@ -23,8 +27,13 @@ services:
     volumes:
       - ./data:/app/data
       - ./performance:/app/performance
-    #environment:
-    #  - GRPC_ENABLE_FORK_SUPPORT=0
+    deploy:
+      resources:
+        limits:
+          cpus: '4'   # Limita l'uso della CPU a 4 core
+
+    environment:
+      - GRPC_ENABLE_FORK_SUPPORT=0
 
 networks:
   flwr_network:
