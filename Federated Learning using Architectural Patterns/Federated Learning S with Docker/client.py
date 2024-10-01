@@ -16,10 +16,10 @@ from flwr.common.logger import log
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10
 from torchvision.transforms import Compose, Normalize, ToTensor
+import json
 
 # Definition of variables and constants
-#DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
+DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 # Model definition
 class Net(nn.Module):
 
@@ -121,7 +121,6 @@ def set_weights(net, parameters):
     # Load state_dict into the model
     net.load_state_dict(state_dict, strict=True)
 
-
 # Creazione della directory per i log di performance
 performance_dir = './performance/'
 if not os.path.exists(performance_dir):
@@ -155,9 +154,13 @@ class FlowerClient(NumPyClient):
     def __init__(self, cid):
         self.cid = cid
         self.resources = {}
-        
+        self.net = Net().to(DEVICE)
+        self.trainloader, self.testloader = load_data()
+
     def fit(self, parameters, config):
         print(f"CLIENT {self.cid}: Starting training...", flush=True)
+        cpu_start = psutil.cpu_percent(interval=None)
+
         # Measure the initial communication time (receiving parameters from the server)
         comm_start_time = time.time()
 
@@ -167,6 +170,9 @@ class FlowerClient(NumPyClient):
 
         # Measure the final communication time (completion of the training cycle)
         comm_end_time = time.time()
+
+        cpu_end = psutil.cpu_percent(interval=None)
+        cpu_usage = cpu_start + cpu_end / 2
 
         # Calculate communication time
         communication_time = comm_end_time - comm_start_time
@@ -209,7 +215,7 @@ class FlowerClient(NumPyClient):
             "system_info": system_info_json,  # Usa la stringa serializzata
         }
 
-        return get_weights(net), len(trainloader.dataset), metrics
+        return get_weights(self.net), len(self.trainloader.dataset), metrics 
 
     def evaluate(self, parameters, config):
         print(f"CLIENT {self.cid}: Starting evaluation...", flush=True)
@@ -221,8 +227,10 @@ class FlowerClient(NumPyClient):
 def client_fn(context: Context):
     original_cid = context.node_id
     original_cid_str = str(original_cid)
+
     hash_object = hashlib.md5(original_cid_str.encode())
-    cid = hash_object.hexdigest()[:4]
+    cid = hash_object.hexdigest()[:4]  
+
     return FlowerClient(cid=cid).to_client()
 
 # Flower ClientApp using client_fn
