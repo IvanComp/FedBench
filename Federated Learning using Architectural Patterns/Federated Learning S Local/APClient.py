@@ -1,14 +1,21 @@
 import platform
 import psutil
-import hashlib
 from datetime import datetime
-
 
 class ClientRegistry:
     def __init__(self):
         self.registry = {}
 
     def get_client_info(self):
+
+        cpu_count = psutil.cpu_count(logical=False)  # Physical cores
+
+        # Logica di assegnazione dinamica del cluster
+        if cpu_count <= 1:
+            assigned_cluster = 'A'
+        else:
+            assigned_cluster = 'B'
+
         """Gathers system information about the client."""
         info = {
             "platform": platform.system(),
@@ -20,7 +27,7 @@ class ClientRegistry:
             "ram_total": psutil.virtual_memory().total / (1024 ** 3),  # Total RAM in GB
             "ram_available": psutil.virtual_memory().available / (1024 ** 3),  # Available RAM in GB
             "python_version": platform.python_version(),
-            "cluster": 0,
+            "cluster": assigned_cluster,
         }
         return info
 
@@ -30,7 +37,6 @@ class ClientRegistry:
         self.registry[cid] = {
             'resources': resource_info,
             'system_info': client_info,  # Save the system info
-            'last_performance': None,  # Aggiungi un campo per la performance
             'active': True,
             'last_update': datetime.now()
         }
@@ -44,16 +50,15 @@ class ClientRegistry:
             self.registry[cid]['last_update'] = last_update or datetime.now()
             print(f"Client {cid} status updated: {status}")
 
-    def update_client_performance(self, cid, performance):
-        """Aggiorna la performance di un client."""
-        if cid in self.registry:
-            self.registry[cid]['last_performance'] = performance
-
     def get_active_clients(self):
         """Returns the list of active clients."""
         active_clients = {cid: info for cid, info in self.registry.items() if info['active']}
         print(f"Active clients: {list(active_clients.keys())}")
         return active_clients
+
+    def is_registered(self, cid):
+        """Check if a client is already registered."""
+        return cid in self.registry
 
     def print_clients_info(self):
         """Prints the list of clients with their respective system information."""
@@ -67,5 +72,3 @@ class ClientRegistry:
                 print()  # Newline for readability
         else:
             print("No active clients registered.")
-
-client_registry = ClientRegistry()

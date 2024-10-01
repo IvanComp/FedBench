@@ -21,12 +21,27 @@ if not os.path.exists(performance_dir):
 
 # Inizializzazione del file CSV, sovrascrivendo eventuali file esistenti
 csv_file = os.path.join(performance_dir, 'FLwithAP_performance_metrics.csv')
-if os.path.exists(csv_file):
-    os.remove(csv_file)
+if not os.path.exists(csv_file):  # Crea il file solo se non esiste
+    with open(csv_file, 'w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Time', 'CPU Usage (%)'])
 
-with open(csv_file, 'w', newline='') as file:
-    writer = csv.writer(file)
-    writer.writerow(['Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Time', 'CPU Usage (%)'])
+
+def append_to_csv(data):
+    """Scrivi i dati nel CSV evitando conflitti di accesso."""
+    try:
+        with open(csv_file, 'a', newline='') as file:
+            # Blocca il file per impedire accessi concorrenti
+            if os.name != 'nt':  # Su Windows, fcntl non è disponibile
+                fcntl.flock(file.fileno(), fcntl.LOCK_EX)
+
+            writer = csv.writer(file)
+            writer.writerow(data)
+
+            if os.name != 'nt':
+                fcntl.flock(file.fileno(), fcntl.LOCK_UN)
+    except PermissionError as e:
+        print(f"PermissionError: {e}. Another process is using the file.")
 
 # Load model and data (simple CNN, CIFAR-10)
 net = Net().to(DEVICE)
@@ -64,7 +79,6 @@ class FlowerClient(NumPyClient):
             "ram_total": psutil.virtual_memory().total / (1024 ** 3),
             "ram_available": psutil.virtual_memory().available / (1024 ** 3),
             "python_version": platform.python_version(),
-            "cluster": 0,
         }
 
         # Serializza system_info in una stringa JSON

@@ -41,7 +41,6 @@ with open(csv_file, 'w', newline='') as file:
     writer = csv.writer(file)
     writer.writerow(['Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Time', 'CPU Usage (%)'])
 
-
 # Function to measure and log communication time
 def measure_communication_time(start_time, end_time):
     communication_time = end_time - start_time
@@ -50,51 +49,29 @@ def measure_communication_time(start_time, end_time):
 
 
 # Function to log the time of each round
-def log_round_time(client_id, fl_round, training_time, communication_time, cpu_usage):  # Added CPU usage parameter
+def log_round_time(client_id, fl_round, training_time, communication_time, cpu_usage):
     total_time = training_time + communication_time
-    print(
-        f"CLIENT {client_id}: Round {fl_round} completed with total time {total_time:.2f} seconds and CPU usage {cpu_usage:.2f}%")
+    print(f"CLIENT {client_id}: Round {fl_round} completed with total time {total_time:.2f} seconds and CPU usage {cpu_usage:.2f}%")
 
     # Save the data in the CSV
     with open(csv_file, 'a', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow(
-            [client_id, fl_round, training_time, communication_time, total_time, cpu_usage])  # Log CPU Usage
+        writer.writerow([client_id, fl_round, training_time, communication_time, total_time, cpu_usage])  # Log CPU Usage
 
-    # Update the client in the registry
+    # Aggiorna il registro del client
     client_registry.update_client(client_id, True)
 
 
-# Function to select clients based on the given criteria (performance, resources, etc.)
-def select_clients(client_registry, num_clients, criteria="performance"):
-    selected_clients = []
+# Function to cluster clients based on their properties
+def cluster_clients(client_registry, num_clusters):
+    clusters = {letter: [] for letter in ['A', 'B']}  # Crea 3 cluster A, B, C
 
-    if criteria == "performance":
-        # Seleziona i client in base alla loro performance passata
-        all_clients = client_registry.get_active_clients()
-        clients_performance = [
-            (cid, info['last_performance'] if info['last_performance'] is not None else float('-inf'))
-            for cid, info in all_clients.items()
-        ]
+    all_clients = client_registry.get_active_clients()
+    for cid, info in all_clients.items():
+        cluster = info['cluster']  # Prendi il cluster assegnato al client (A, B o C)
+        clusters[cluster].append(cid)
 
-        # Ordina i client in base alla performance (ascendente o discendente in base alla tua necessità)
-        clients_performance.sort(key=lambda x: x[1], reverse=True)
-
-        # Seleziona i migliori client
-        selected_clients = [cid for cid, _ in clients_performance[:num_clients]]
-
-    elif criteria == "resources":
-        # Seleziona i client in base alle risorse (ad es. CPU, RAM disponibili)
-        all_clients = client_registry.get_active_clients()
-        clients_resources = [(cid, info['system_info']['cpu']) for cid, info in all_clients.items()]
-
-        # Ordina in base alle risorse disponibili (ad es. numero di CPU)
-        clients_resources.sort(key=lambda x: x[1], reverse=True)
-        selected_clients = [cid for cid, _ in clients_resources[:num_clients]]
-
-    # Puoi aggiungere altri criteri, come "data" o combinazioni personalizzate
-    return selected_clients
-
+    return clusters
 
 # Function to generate performance graphs
 def generate_performance_graphs():
@@ -109,8 +86,7 @@ def generate_performance_graphs():
     num_clients = len(unique_clients)
     df = df.reset_index(drop=True)
     df['FL Round'] = (df.index // num_clients) + 1
-    df[['Training Time', 'Communication Time', 'Total Time']] = df[
-        ['Training Time', 'Communication Time', 'Total Time']].round(2)
+    df[['Training Time', 'Communication Time', 'Total Time']] = df[['Training Time', 'Communication Time', 'Total Time']].round(2)
     df.to_csv(csv_file, index=False)
 
     plt.figure(figsize=(12, 6))
@@ -196,44 +172,42 @@ def generate_communication_time_graph():
 
 
 # Define metric aggregation function
-def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
-    global currentRnd
-
+def weighted_average_global(metrics: List[Tuple[int, Metrics]]) -> Metrics:
     examples = [num_examples for num_examples, _ in metrics]
+
+    total_examples = sum(examples)
+    if total_examples == 0:
+        print("No examples available, skipping aggregation.")
+        return {
+            "train_loss": float('inf'),
+            "train_accuracy": 0.0,
+        }
 
     train_losses = [num_examples * m["train_loss"] for num_examples, m in metrics]
     train_accuracies = [num_examples * m["train_accuracy"] for num_examples, m in metrics]
     val_losses = [num_examples * m["val_loss"] for num_examples, m in metrics]
     val_accuracies = [num_examples * m["val_accuracy"] for num_examples, m in metrics]
 
-    # Seleziona dinamicamente i client per il prossimo round
-    num_clients = 5  # Numero di client da selezionare
-    selected_clients = select_clients(client_registry, num_clients, criteria="performance")
+    global currentRnd
+    currentRnd += 1
 
-    # Raccogli le informazioni dei client dalle metriche e scrivi nel CSV
+    # Aggiungi la registrazione e l'aggiornamento dei client nel registro
     for _, m in metrics:
         client_id = m.get("client_id")
         training_time = m.get("training_time")
         communication_time = m.get("communication_time")
-        total_time = m.get("total_time")
         cpu_usage = m.get("cpu_usage")
-        system_info_json = m.get("system_info")
+        if client_id:
+            # Registra o aggiorna il client nel registry
+            if not client_registry.is_registered(client_id):
+                # Registra il client se non è ancora registrato
+                client_registry.register_client(client_id, {})
+            # Aggiorna il client come attivo
+            client_registry.update_client(client_id, True)
+            # Log delle metriche del round
+            log_round_time(client_id, currentRnd, training_time, communication_time, cpu_usage)
 
-        if client_id and system_info_json:
-            # Deserializza system_info
-            system_info = json.loads(system_info_json)
-
-            client_registry.register_client(client_id, {})
-            client_registry.registry[client_id]['system_info'] = system_info
-            client_registry.registry[client_id]['last_update'] = datetime.now()
-
-            # Scrivi le metriche nel CSV
-            with open(csv_file, 'a', newline='') as file:
-                writer = csv.writer(file)
-                writer.writerow([client_id, currentRnd + 1, training_time, communication_time, total_time, cpu_usage])
-
-    currentRnd += 1
-
+    # Genera i grafici e stampa le informazioni dei client alla fine dell'ultimo round
     if currentRnd == num_rounds:
         generate_performance_graphs()
         generate_cpu_usage_graph()
@@ -243,11 +217,16 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
         client_registry.print_clients_info()
 
     return {
-        "train_loss": sum(train_losses) / sum(examples),
-        "train_accuracy": sum(train_accuracies) / sum(examples),
-        "val_loss": sum(val_losses) / sum(examples),
-        "val_accuracy": sum(val_accuracies) / sum(examples),
+        "train_loss": sum(train_losses) / total_examples,
+        "train_accuracy": sum(train_accuracies) / total_examples,
+        "val_loss": sum(val_losses) / total_examples,
+        "val_accuracy": sum(val_accuracies) / total_examples,
     }
+
+
+# Esegui clustering
+num_clusters = 3  # Definisci quanti cluster vuoi
+client_clusters = cluster_clients(client_registry, num_clusters)
 
 
 # Initialize model parameters
@@ -261,7 +240,7 @@ def server_fn(context: Context):
         fraction_fit=1.0,  # Select all available clients
         fraction_evaluate=0.0,  # Disable evaluation
         min_available_clients=2,
-        fit_metrics_aggregation_fn=weighted_average,
+        fit_metrics_aggregation_fn=weighted_average_global,  # Usa l'aggregazione globale
         initial_parameters=parameters,
     )
     return ServerAppComponents(strategy=strategy, config=server_config)
