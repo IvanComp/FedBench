@@ -3,7 +3,6 @@ import psutil
 import hashlib
 from datetime import datetime
 
-
 class ClientRegistry:
     def __init__(self):
         self.registry = {}
@@ -30,7 +29,6 @@ class ClientRegistry:
         self.registry[cid] = {
             'resources': resource_info,
             'system_info': client_info,  # Save the system info
-            'last_performance': None,  # Aggiungi un campo per la performance
             'active': True,
             'last_update': datetime.now()
         }
@@ -43,11 +41,6 @@ class ClientRegistry:
             self.registry[cid]['active'] = status
             self.registry[cid]['last_update'] = last_update or datetime.now()
             print(f"Client {cid} status updated: {status}")
-
-    def update_client_performance(self, cid, performance):
-        """Aggiorna la performance di un client."""
-        if cid in self.registry:
-            self.registry[cid]['last_performance'] = performance
 
     def get_active_clients(self):
         """Returns the list of active clients."""
@@ -67,5 +60,5 @@ class ClientRegistry:
                 print()  # Newline for readability
         else:
             print("No active clients registered.")
-
+            
 client_registry = ClientRegistry()

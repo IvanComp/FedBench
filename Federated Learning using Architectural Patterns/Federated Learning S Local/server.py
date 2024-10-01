@@ -41,6 +41,7 @@ with open(csv_file, 'w', newline='') as file:
     writer = csv.writer(file)
     writer.writerow(['Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Time', 'CPU Usage (%)'])
 
+
 # Function to measure and log communication time
 def measure_communication_time(start_time, end_time):
     communication_time = end_time - start_time
@@ -63,7 +64,37 @@ def log_round_time(client_id, fl_round, training_time, communication_time, cpu_u
     # Update the client in the registry
     client_registry.update_client(client_id, True)
 
-import seaborn as sns
+
+# Function to select clients based on the given criteria (performance, resources, etc.)
+def select_clients(client_registry, num_clients, criteria="performance"):
+    selected_clients = []
+
+    if criteria == "performance":
+        # Seleziona i client in base alla loro performance passata
+        all_clients = client_registry.get_active_clients()
+        clients_performance = [
+            (cid, info['last_performance'] if info['last_performance'] is not None else float('-inf'))
+            for cid, info in all_clients.items()
+        ]
+
+        # Ordina i client in base alla performance (ascendente o discendente in base alla tua necessità)
+        clients_performance.sort(key=lambda x: x[1], reverse=True)
+
+        # Seleziona i migliori client
+        selected_clients = [cid for cid, _ in clients_performance[:num_clients]]
+
+    elif criteria == "resources":
+        # Seleziona i client in base alle risorse (ad es. CPU, RAM disponibili)
+        all_clients = client_registry.get_active_clients()
+        clients_resources = [(cid, info['system_info']['cpu']) for cid, info in all_clients.items()]
+
+        # Ordina in base alle risorse disponibili (ad es. numero di CPU)
+        clients_resources.sort(key=lambda x: x[1], reverse=True)
+        selected_clients = [cid for cid, _ in clients_resources[:num_clients]]
+
+    # Puoi aggiungere altri criteri, come "data" o combinazioni personalizzate
+    return selected_clients
+
 
 # Function to generate performance graphs
 def generate_performance_graphs():
@@ -78,7 +109,8 @@ def generate_performance_graphs():
     num_clients = len(unique_clients)
     df = df.reset_index(drop=True)
     df['FL Round'] = (df.index // num_clients) + 1
-    df[['Training Time', 'Communication Time', 'Total Time']] = df[['Training Time', 'Communication Time', 'Total Time']].round(2)
+    df[['Training Time', 'Communication Time', 'Total Time']] = df[
+        ['Training Time', 'Communication Time', 'Total Time']].round(2)
     df.to_csv(csv_file, index=False)
 
     plt.figure(figsize=(12, 6))
@@ -162,6 +194,7 @@ def generate_communication_time_graph():
     plt.savefig(line_graph_path, format="pdf")
     plt.close()
 
+
 # Define metric aggregation function
 def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
     global currentRnd
@@ -172,6 +205,10 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
     train_accuracies = [num_examples * m["train_accuracy"] for num_examples, m in metrics]
     val_losses = [num_examples * m["val_loss"] for num_examples, m in metrics]
     val_accuracies = [num_examples * m["val_accuracy"] for num_examples, m in metrics]
+
+    # Seleziona dinamicamente i client per il prossimo round
+    num_clients = 5  # Numero di client da selezionare
+    selected_clients = select_clients(client_registry, num_clients, criteria="performance")
 
     # Raccogli le informazioni dei client dalle metriche e scrivi nel CSV
     for _, m in metrics:
@@ -211,6 +248,7 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
         "val_loss": sum(val_losses) / sum(examples),
         "val_accuracy": sum(val_accuracies) / sum(examples),
     }
+
 
 # Initialize model parameters
 ndarrays = get_weights(Net())
