@@ -131,36 +131,32 @@ class FlowerClient(NumPyClient):
         self.trainloader, self.testloader = load_data()
 
     def fit(self, parameters, config):
-        print(f"CLIENT {self.cid}: Starting training...", flush=True)
-        # Measure the initial communication time (receiving parameters from the server)
+        print(f"CLIENT {self.cid}: Starting training.", flush=True)
+
+        # Monitoraggio iniziale della CPU
+        cpu_start = psutil.cpu_percent(interval=None)  # Ottieni l'utilizzo della CPU prima del training
+
         comm_start_time = time.time()
-
-        # Set weights and measure training time
-        set_weights(self.net, parameters)
-        results, training_time = train(self.net, self.trainloader, self.testloader, epochs=1, device=DEVICE)
-
-        # Measure the final communication time (completion of the training cycle)
+        set_weights(net, parameters)
+        results, training_time = train(net, trainloader, testloader, epochs=1, device=DEVICE)
         comm_end_time = time.time()
 
-        # Calculate communication time
+        # Monitoraggio finale della CPU
+        cpu_end = psutil.cpu_percent(interval=None)  # Ottieni l'utilizzo della CPU dopo il training
+
+        # Calcola la differenza media di utilizzo della CPU
+        cpu_usage = (cpu_start + cpu_end) / 2
+
+        # Calcola i tempi
         communication_time = comm_end_time - comm_start_time
-
-        # Log the training time
-        print(f"CLIENT {self.cid}: Training completed in {training_time:.2f} seconds", flush=True)
-
-        # Log the communication time
-        print(f"CLIENT {self.cid}: Communication time: {communication_time:.2f} seconds", flush=True)
-
         total_time = training_time + communication_time
 
-        # Append timing data to CSV (make sure the path is correct)
-        csv_file = './performance/performance.csv'
+        # Append dati CPU e tempi al CSV
         with open(csv_file, 'a', newline='') as file:
             writer = csv.writer(file)
-            writer.writerow([self.cid, 0, training_time, communication_time, total_time])
+            writer.writerow([self.cid, 0, training_time, communication_time, total_time, cpu_usage])
 
-        # Return updated weights, size of training data, and results
-        return get_weights(self.net), len(self.trainloader.dataset), results
+        return get_weights(net), len(trainloader.dataset), results
 
     def evaluate(self, parameters, config):
         print(f"CLIENT {self.cid}: Starting evaluation...", flush=True)

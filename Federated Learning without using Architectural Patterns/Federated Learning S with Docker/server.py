@@ -19,34 +19,6 @@ matplotlib.use('Agg')
 # Device configuration
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-# Model definition
-class Net(nn.Module):
-    """Model (simple CNN adapted from 'PyTorch: A 60 Minute Blitz')"""
-
-    def __init__(self) -> None:
-        super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(3, 6, 5)
-        self.pool = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(6, 16, 5)
-        self.fc1 = nn.Linear(16 * 5 * 5, 120)
-        self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 10)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = x.view(-1, 16 * 5 * 5)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        return self.fc3(x)
-
-# Function to get model weights
-def get_weights(net):
-    # Ensure consistent key ordering
-    state_dict = net.state_dict()
-    ordered_state_dict = OrderedDict(sorted(state_dict.items()))
-    return [val.cpu().numpy() for key, val in ordered_state_dict.items()]
-
 # Global variable to keep track of the current round
 currentRnd = 0
 num_rounds = 3  # Total number of rounds
@@ -81,14 +53,14 @@ def measure_communication_time(start_time, end_time):
     return communication_time
 
 # Function to log the time of each round
-def log_round_time(client_id, fl_round, training_time, communication_time):
+def log_round_time(client_id, fl_round, training_time, communication_time, cpu_usage):
     total_time = training_time + communication_time
-    print(f"CLIENT {client_id}: Round {fl_round} completed with total time {total_time:.2f} seconds")
+    print(f"CLIENT {client_id}: Round {fl_round} completed with total time {total_time:.2f} seconds and CPU usage {cpu_usage:.2f}%")
 
     # Save the data in the CSV
     with open(csv_file, 'a', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow([client_id, fl_round, training_time, communication_time, total_time])
+        writer.writerow([client_id, fl_round, training_time, communication_time, total_time, cpu_usage])
 
 def generate_performance_graphs():
     sns.set_theme(style="ticks")
