@@ -125,10 +125,8 @@ def set_weights(net, parameters):
 class FlowerClient(NumPyClient):
     def __init__(self, cid):
         self.cid = cid
-        # Initialize the model and data loaders
-        self.net = Net().to(DEVICE)
-        self.trainloader, self.testloader = load_data()
-
+        self.resources = {}
+        
     def fit(self, parameters, config):
         print(f"CLIENT {self.cid}: Starting training...", flush=True)
         # Measure the initial communication time (receiving parameters from the server)
