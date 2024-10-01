@@ -18,7 +18,7 @@ from torchvision.datasets import CIFAR10
 from torchvision.transforms import Compose, Normalize, ToTensor
 
 # Definition of variables and constants
-DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+#DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # Model definition
 class Net(nn.Module):
@@ -152,14 +152,37 @@ class FlowerClient(NumPyClient):
 
         total_time = training_time + communication_time
 
-        # Append timing data to CSV (make sure the path is correct)
-        csv_file = './performance/performance.csv'
-        with open(csv_file, 'a', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow([self.cid, 0, training_time, communication_time, total_time])
+        # Raccogli le informazioni di sistema del client
+        system_info = {
+            "platform": platform.system(),
+            "platform_version": platform.version(),
+            "architecture": platform.machine(),
+            "cpu": platform.processor(),
+            "cpu_count": psutil.cpu_count(logical=False),
+            "cpu_threads": psutil.cpu_count(logical=True),
+            "ram_total": psutil.virtual_memory().total / (1024 ** 3),
+            "ram_available": psutil.virtual_memory().available / (1024 ** 3),
+            "python_version": platform.python_version(),
+        }
 
-        # Return updated weights, size of training data, and results
-        return get_weights(self.net), len(self.trainloader.dataset), results
+        # Serializza system_info in una stringa JSON
+        system_info_json = json.dumps(system_info)
+
+        # Prepara le metriche da inviare al server
+        metrics = {
+            "train_loss": results["train_loss"],
+            "train_accuracy": results["train_accuracy"],
+            "val_loss": results["val_loss"],
+            "val_accuracy": results["val_accuracy"],
+            "training_time": training_time,
+            "communication_time": communication_time,
+            "total_time": total_time,
+            "cpu_usage": cpu_usage,
+            "client_id": self.cid,
+            "system_info": system_info_json,  # Usa la stringa serializzata
+        }
+
+        return get_weights(net), len(trainloader.dataset), metrics
 
     def evaluate(self, parameters, config):
         print(f"CLIENT {self.cid}: Starting evaluation...", flush=True)

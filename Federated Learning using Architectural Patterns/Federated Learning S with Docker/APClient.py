@@ -6,7 +6,6 @@ class ClientRegistry:
     def __init__(self):
         self.registry = {}
         
-
     def get_client_info(self):
 
         cpu_count = psutil.cpu_count(logical=False)  # Physical cores
