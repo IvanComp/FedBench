@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.server
-    container_name: flwr_server
+    container_name: flwr_server_raspberry
     ports:
       - "8080:8080"
     volumes:
@@ -19,7 +19,7 @@ services:
   client:
     build:
       context: .
-      dockerfile: Dockerfile.client
+      dockerfile: Dockerfile.RaspberryClient
     depends_on:
       - server
     networks:
