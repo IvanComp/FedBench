@@ -1,0 +1,5 @@
+Client ID,FL Round,Training Time,Communication Time,Total Time,CPU Usage (%)
+client 1,1,37.08,84.86,121.94,55.55
+client 2,1,36.32,85.11,121.43,55.5
+client 2,2,32.76,79.53,112.29,95.5
+client 1,2,33.37,80.79,114.16,88.55000000000001

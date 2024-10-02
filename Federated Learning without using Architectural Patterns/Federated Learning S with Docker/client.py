@@ -7,6 +7,8 @@ import hashlib  # Import hashlib for hashing
 import psutil  # CPU
 from task import DEVICE, Net, get_weights, load_data, set_weights, train, test
 
+CLIENT_ID = os.getenv("HOSTNAME")
+
 # Create the directory for performance logs
 performance_dir = './performance/'
 if not os.path.exists(performance_dir):
@@ -28,7 +30,7 @@ trainloader, testloader = load_data()
 # Define FlowerClient and client_fn
 class FlowerClient(NumPyClient):
     def __init__(self, cid):
-        self.cid = cid
+        self.cid = CLIENT_ID
 
     def fit(self, parameters, config):
         print(f"CLIENT {self.cid}: Starting training.", flush=True)

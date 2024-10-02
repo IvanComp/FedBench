@@ -14,7 +14,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1'   # Limita l'uso della CPU a 2 core
+          cpus: '0.5'   
 
   client:
     build:
@@ -30,7 +30,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '4'   # Limita l'uso della CPU a 4 core
+          cpus: '5'   
 
     environment:
       - GRPC_ENABLE_FORK_SUPPORT=0

@@ -11,6 +11,10 @@ services:
       - ./performance:/app/performance
     networks:
       - flwr_network_raspberry
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'  
 
   client:
     build:
@@ -23,8 +27,10 @@ services:
     volumes:
       - ./data:/app/data
       - ./performance:/app/performance
-    #environment:
-    #  - GRPC_ENABLE_FORK_SUPPORT=0
+    deploy:
+      resources:
+        limits:
+          cpus: '5'  
 
 networks:
   flwr_network_raspberry:
