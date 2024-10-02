@@ -13,6 +13,7 @@ WORKDIR /app
 # Copy the server code
 COPY client.py /app/client.py
 COPY server.py /app/server.py
+COPY task.py /app/task.py
 COPY performance/ /app/performance/
 COPY data/ /app/data/
 
