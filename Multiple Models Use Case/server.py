@@ -216,12 +216,6 @@ def weighted_average_global(metrics: List[Tuple[int, Metrics]], task_type: str) 
         "val_loss": avg_val_loss,
         "val_accuracy": avg_val_accuracy,
     }
-# Memorizza le metriche nel dizionario globale
-    global_metrics[task_type]["train_loss"].append(avg_train_loss)
-    global_metrics[task_type]["train_accuracy"].append(avg_train_accuracy)
-    global_metrics[task_type]["val_loss"].append(avg_val_loss)
-    global_metrics[task_type]["val_accuracy"].append(avg_val_accuracy)
-
 
 # Inizializza i pesi separatamente per taskA e taskB
 parametersA = ndarrays_to_parameters(get_weights_A(NetA()))
@@ -242,7 +236,15 @@ def print_final_results():
 
 def server_fn(context: Context):
     server_config = ServerConfig(num_rounds=num_rounds)
-    task_type = "taskA"
+    # Determina dinamicamente il task_type basato sui client attivi
+    active_clients = client_registry.get_active_clients()
+    if active_clients:
+        # Ottieni il tipo di task del primo client attivo
+        first_client = next(iter(active_clients.values()))
+        task_type = first_client['resources'].get("model_type", "taskA")
+    else:
+        # Valore di default se non ci sono client attivi
+        task_type = "taskB"
 
     if task_type == "taskA":
         strategy = FedAvg(
@@ -264,10 +266,6 @@ def server_fn(context: Context):
         raise ValueError(f"Unknown task type: {task_type}")
 
     return ServerAppComponents(strategy=strategy, config=server_config)
-
-
-app = ServerApp(server_fn=server_fn)
-
 
 app = ServerApp(server_fn=server_fn)
 

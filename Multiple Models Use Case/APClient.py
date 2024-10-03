@@ -37,10 +37,25 @@ class ClientRegistry:
         print(f"System info: {client_info}")
 
     def get_client_model(self, cid):
-        """Returns the model assigned to the client (taskA or taskB)"""
+        """Returns the model assigned to the client (taskA or taskB) based on cid."""
         if cid in self.registry:
-            return self.registry[cid].get("model", "taskA")  # Default to taskA
-        return "taskA"
+            return self.registry[cid]['resources'].get("model_type", "taskA")
+        else:
+            # Contare il numero corrente di taskA e taskB
+            taskA_count = sum(1 for client in self.registry.values()
+                              if client['resources'].get("model_type") == "taskA")
+            taskB_count = sum(1 for client in self.registry.values()
+                              if client['resources'].get("model_type") == "taskB")
+
+            # Decidere il model_type basato sui conteggi
+            if taskA_count < taskB_count or (taskA_count == taskB_count):
+                model_type = "taskA"
+            else:
+                model_type = "taskB"
+
+            # Registrare il client con il model_type assegnato
+            self.register_client(cid, {"model_type": model_type})
+            return model_type
 
     def update_client(self, cid, status, last_update=None):
         """Updates the status of the client."""
