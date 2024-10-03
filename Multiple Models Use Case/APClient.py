@@ -2,7 +2,6 @@ import platform
 import psutil
 from datetime import datetime
 
-
 class ClientRegistry:
     def __init__(self):
         self.registry = {}

@@ -76,6 +76,7 @@ class FlowerClient(NumPyClient):
             "total_time": total_time,
             "cpu_usage": cpu_usage,
             "client_id": self.cid,
+            "model_type": self.model_type,  # Aggiungi questa linea
         }
 
         if self.model_type == "taskA":
@@ -99,7 +100,12 @@ class FlowerClient(NumPyClient):
             raise ValueError(f"Unknown model type: {self.model_type}")
 
         print(f"CLIENT {self.cid} ({self.model_type}): Evaluation completed", flush=True)
-        return loss, len(self.testloader.dataset), {"accuracy": accuracy}
+        metrics = {
+            "accuracy": accuracy,
+            "client_id": self.cid,
+            "model_type": self.model_type,  # Aggiungi questa linea
+        }
+        return loss, len(self.testloader.dataset), metrics
 
 def client_fn(context: Context):
     original_cid = context.node_id

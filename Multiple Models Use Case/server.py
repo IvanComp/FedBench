@@ -50,14 +50,15 @@ def measure_communication_time(start_time, end_time):
     return communication_time
 
 
-def log_round_time(client_id, fl_round, training_time, communication_time, cpu_usage):
+def log_round_time(client_id, fl_round, training_time, communication_time, cpu_usage, model_type):
     total_time = training_time + communication_time
     print(
-        f"CLIENT {client_id}: Round {fl_round} completed with total time {total_time:.2f} seconds and CPU usage {cpu_usage:.2f}%")
+        f"CLIENT {client_id} ({model_type}): Round {fl_round} completed with total time {total_time:.2f} seconds and CPU usage {cpu_usage:.2f}%"
+    )
 
     with open(csv_file, 'a', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow([client_id, fl_round, training_time, communication_time, total_time, cpu_usage, client_id])
+        writer.writerow([client_id, fl_round, training_time, communication_time, total_time, cpu_usage, model_type])
 
     client_registry.update_client(client_id, True)
 
@@ -154,6 +155,7 @@ def generate_communication_time_graph():
     plt.savefig(line_graph_path, format="pdf")
     plt.close()
 
+
 def weighted_average_global(metrics: List[Tuple[int, Metrics]], task_type: str) -> Metrics:
     examples = [num_examples for num_examples, _ in metrics]
     total_examples = sum(examples)
@@ -182,16 +184,22 @@ def weighted_average_global(metrics: List[Tuple[int, Metrics]], task_type: str) 
     global currentRnd
     currentRnd += 1
 
-    for _, m in metrics:
+    for num_examples, m in metrics:
         client_id = m.get("client_id")
+        model_type = m.get("model_type")  # Estrai model_type
         training_time = m.get("training_time")
         communication_time = m.get("communication_time")
         cpu_usage = m.get("cpu_usage")
+
         if client_id:
             if not client_registry.is_registered(client_id):
                 client_registry.register_client(client_id, {})
-            client_registry.update_client(client_id, True)
-            log_round_time(client_id, currentRnd, training_time, communication_time, cpu_usage)
+
+            # Stampa model_type sul server
+            print(f"Received model_type from Client {client_id}: {model_type}")
+
+            # Log includendo model_type
+            log_round_time(client_id, currentRnd, training_time, communication_time, cpu_usage, model_type)
 
     if currentRnd == num_rounds:
         generate_performance_graphs()
@@ -203,12 +211,11 @@ def weighted_average_global(metrics: List[Tuple[int, Metrics]], task_type: str) 
         print_final_results()
 
     return {
-        "train_loss": sum(train_losses) / total_examples,
-        "train_accuracy": sum(train_accuracies) / total_examples,
-        "val_loss": sum(val_losses) / total_examples,
-        "val_accuracy": sum(val_accuracies) / total_examples,
+        "train_loss": avg_train_loss,
+        "train_accuracy": avg_train_accuracy,
+        "val_loss": avg_val_loss,
+        "val_accuracy": avg_val_accuracy,
     }
-
 # Memorizza le metriche nel dizionario globale
     global_metrics[task_type]["train_loss"].append(avg_train_loss)
     global_metrics[task_type]["train_accuracy"].append(avg_train_accuracy)
