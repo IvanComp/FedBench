@@ -1,7 +1,30 @@
-from typing import List, Tuple
-from flwr.common import Metrics, ndarrays_to_parameters, Context
-from flwr.server import ServerApp, ServerConfig, ServerAppComponents
-from flwr.server.strategy import FedAvg
+# Server.py
+
+from typing import List, Tuple, Dict, Optional
+from flwr.common import (
+    Metrics,
+    ndarrays_to_parameters,
+    parameters_to_ndarrays,
+    Parameters,
+    FitRes,
+    EvaluateRes,
+    Scalar,
+    Context,
+    FitIns,
+    EvaluateIns,
+    GetPropertiesIns,
+    GetPropertiesRes,
+)
+from flwr.server import (
+    ServerConfig,
+    ServerApp,
+    ServerAppComponents,
+)
+from flwr.server.strategy import Strategy
+from flwr.server.client_manager import ClientManager
+from flwr.server.client_proxy import ClientProxy
+from flwr.common.logger import log
+
 from taskA import Net as NetA, get_weights as get_weights_A
 from taskB import Net as NetB, get_weights as get_weights_B
 import time
@@ -12,10 +35,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
 from APClient import ClientRegistry
-import platform
 import psutil
-from datetime import datetime
-import json
 
 client_registry = ClientRegistry()
 
@@ -41,7 +61,7 @@ if os.path.exists(csv_file):
 
 with open(csv_file, 'w', newline='') as file:
     writer = csv.writer(file)
-    writer.writerow(['Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Time', 'CPU Usage (%)','Task'])
+    writer.writerow(['Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Time', 'CPU Usage (%)', 'Task'])
 
 
 def measure_communication_time(start_time, end_time):
@@ -175,7 +195,7 @@ def weighted_average_global(metrics: List[Tuple[int, Metrics]], task_type: str) 
     avg_val_loss = sum(val_losses) / total_examples
     avg_val_accuracy = sum(val_accuracies) / total_examples
 
-    # Memorizza le metriche nel dizionario globale
+    # Store metrics in the global dictionary
     global_metrics[task_type]["train_loss"].append(avg_train_loss)
     global_metrics[task_type]["train_accuracy"].append(avg_train_accuracy)
     global_metrics[task_type]["val_loss"].append(avg_val_loss)
@@ -186,7 +206,7 @@ def weighted_average_global(metrics: List[Tuple[int, Metrics]], task_type: str) 
 
     for num_examples, m in metrics:
         client_id = m.get("client_id")
-        model_type = m.get("model_type")  # Estrai model_type
+        model_type = m.get("model_type")  # Extract model_type
         training_time = m.get("training_time")
         communication_time = m.get("communication_time")
         cpu_usage = m.get("cpu_usage")
@@ -195,10 +215,10 @@ def weighted_average_global(metrics: List[Tuple[int, Metrics]], task_type: str) 
             if not client_registry.is_registered(client_id):
                 client_registry.register_client(client_id, {})
 
-            # Stampa model_type sul server
+            # Print model_type on the server
             print(f"Received model_type from Client {client_id}: {model_type}")
 
-            # Log includendo model_type
+            # Log including model_type
             log_round_time(client_id, currentRnd, training_time, communication_time, cpu_usage, model_type)
 
     if currentRnd == num_rounds:
@@ -217,7 +237,7 @@ def weighted_average_global(metrics: List[Tuple[int, Metrics]], task_type: str) 
         "val_accuracy": avg_val_accuracy,
     }
 
-# Inizializza i pesi separatamente per taskA e taskB
+# Initialize weights separately for taskA and taskB
 parametersA = ndarrays_to_parameters(get_weights_A(NetA()))
 parametersB = ndarrays_to_parameters(get_weights_B(NetB()))
 
@@ -234,42 +254,147 @@ def print_final_results():
     print(f"  Val loss: {global_metrics['taskB']['val_loss']}")
     print(f"  Val accuracy: {global_metrics['taskB']['val_accuracy']}")
 
+# Definition of the custom strategy
+class MultiModelStrategy(Strategy):
+    def __init__(self, initial_parameters_a: Parameters, initial_parameters_b: Parameters):
+        self.parameters_a = initial_parameters_a
+        self.parameters_b = initial_parameters_b
+
+    def initialize_parameters(self, client_manager: ClientManager) -> Optional[Parameters]:
+        # Return None because we use separate initial parameters for A and B
+        return None
+
+    def configure_fit(
+        self,
+        server_round: int,
+        parameters: Parameters,
+        client_manager: ClientManager,
+    ) -> List[Tuple[ClientProxy, FitIns]]:
+        # Divide clients based on the model they are training
+        clients = client_manager.sample(num_clients=client_manager.num_available())
+        fit_configurations = []
+
+        for client in clients:
+            # Create GetPropertiesIns object
+            get_properties_ins = GetPropertiesIns(config={})
+            # Call get_properties with required arguments
+            properties_res = client.get_properties(
+                ins=get_properties_ins,
+                timeout=None,
+                # Provide group_id if required; use None or an empty string if not applicable
+                group_id=None,
+            )
+            properties = properties_res.properties
+
+            model_type = properties.get("model_type", "taskA")
+
+            if model_type == "taskA":
+                fit_ins = FitIns(self.parameters_a, {})
+            elif model_type == "taskB":
+                fit_ins = FitIns(self.parameters_b, {})
+            else:
+                continue  # Skip client if model_type is not recognized
+
+            fit_configurations.append((client, fit_ins))
+
+        return fit_configurations
+
+    def aggregate_fit(
+            self,
+            server_round: int,
+            results: List[Tuple[ClientProxy, FitRes]],
+            failures: List[BaseException],
+        ) -> Optional[Tuple[Parameters, Dict[str, Scalar]]]:
+            # Separare i risultati per tipo di modello
+            results_a = []
+            results_b = []
+            
+            for client_proxy, fit_res in results:
+                model_type = fit_res.metrics.get("model_type")
+                if model_type == "taskA":
+                    results_a.append((fit_res.parameters, fit_res.num_examples, fit_res.metrics))
+                elif model_type == "taskB":
+                    results_b.append((fit_res.parameters, fit_res.num_examples, fit_res.metrics))
+            
+            # Aggregare i parametri per taskA
+            if results_a:
+                self.parameters_a = self.aggregate_parameters(results_a, "taskA")
+            
+            # Aggregare i parametri per taskB
+            if results_b:
+                self.parameters_b = self.aggregate_parameters(results_b, "taskB")
+            
+            # Combinare le metriche aggregate
+            metrics_aggregated = {
+                "taskA": {
+                    "train_loss": global_metrics["taskA"]["train_loss"][-1],
+                    "train_accuracy": global_metrics["taskA"]["train_accuracy"][-1],
+                    "val_loss": global_metrics["taskA"]["val_loss"][-1],
+                    "val_accuracy": global_metrics["taskA"]["val_accuracy"][-1],
+                },
+                "taskB": {
+                    "train_loss": global_metrics["taskB"]["train_loss"][-1],
+                    "train_accuracy": global_metrics["taskB"]["train_accuracy"][-1],
+                    "val_loss": global_metrics["taskB"]["val_loss"][-1],
+                    "val_accuracy": global_metrics["taskB"]["val_accuracy"][-1],
+                },
+            }
+            
+            # Restituiamo i parametri per uno dei modelli per evitare l'errore
+            # Se non vuoi aggiornare i parametri globali, puoi restituire i parametri attuali
+            return self.parameters_a, metrics_aggregated
+
+    def aggregate_parameters(self, results, task_type):
+        # Aggregate weights using weighted average based on number of examples
+        total_examples = sum([num_examples for _, num_examples, _ in results])
+        new_weights = None
+
+        metrics = []
+        for client_params, num_examples, client_metrics in results:
+            client_weights = parameters_to_ndarrays(client_params)
+            weight = num_examples / total_examples
+            if new_weights is None:
+                new_weights = [w * weight for w in client_weights]
+            else:
+                new_weights = [nw + w * weight for nw, w in zip(new_weights, client_weights)]
+            metrics.append((num_examples, client_metrics))
+
+        # Aggregate metrics
+        weighted_average_global(metrics, task_type)
+
+        return ndarrays_to_parameters(new_weights)
+
+    def configure_evaluate(
+        self,
+        server_round: int,
+        parameters: Parameters,
+        client_manager: ClientManager,
+    ) -> List[Tuple[ClientProxy, EvaluateIns]]:
+        # Implement if necessary
+        return []
+
+    def aggregate_evaluate(
+        self,
+        server_round: int,
+        results: List[Tuple[ClientProxy, EvaluateRes]],
+        failures: List[BaseException],
+    ) -> Optional[float]:
+        # Implement if necessary
+        return None
+
+    def evaluate(
+        self,
+        server_round: int,
+        parameters: Parameters,
+    ) -> Optional[Tuple[float, Dict[str, Scalar]]]:
+        # Implement if necessary
+        return None
+
 def server_fn(context: Context):
-    server_config = ServerConfig(num_rounds=num_rounds)
-    # Determina dinamicamente il task_type basato sui client attivi
-    active_clients = client_registry.get_active_clients()
-    if active_clients:
-        # Ottieni il tipo di task del primo client attivo
-        first_client = next(iter(active_clients.values()))
-        task_type = first_client['resources'].get("model_type", "taskA")
-    else:
-        # Valore di default se non ci sono client attivi
-        task_type = "taskB"
-
-    if task_type == "taskA":
-        strategy = FedAvg(
-            fraction_fit=1.0,
-            fraction_evaluate=0.0,
-            min_available_clients=2,
-            fit_metrics_aggregation_fn=lambda metrics: weighted_average_global(metrics, task_type="taskA"),
-            initial_parameters=parametersA
-        )
-    elif task_type == "taskB":
-        strategy = FedAvg(
-            fraction_fit=1.0,
-            fraction_evaluate=0.0,
-            min_available_clients=2,
-            fit_metrics_aggregation_fn=lambda metrics: weighted_average_global(metrics, task_type="taskB"),
-            initial_parameters=parametersB
-        )
-    else:
-        raise ValueError(f"Unknown task type: {task_type}")
-
-    return ServerAppComponents(strategy=strategy, config=server_config)
+    strategy = MultiModelStrategy(initial_parameters_a=parametersA, initial_parameters_b=parametersB)
+    return ServerAppComponents(strategy=strategy)
 
 app = ServerApp(server_fn=server_fn)
 
 if __name__ == "__main__":
-    from flwr.server import start_server
-
-    start_server(server_address="0.0.0.0:8080", config=ServerConfig(num_rounds=num_rounds))
+    app.run(server_address="0.0.0.0:8080", config=ServerConfig(num_rounds=num_rounds))

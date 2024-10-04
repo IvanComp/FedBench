@@ -1,5 +1,14 @@
+# Client.py
 from flwr.client import ClientApp, NumPyClient
-from flwr.common import Context
+from flwr.common import (
+    parameters_to_ndarrays,
+    ndarrays_to_parameters,
+    Scalar,
+    Context,
+    GetPropertiesIns,
+    GetPropertiesRes,
+)
+from typing import Dict
 import time
 from datetime import datetime
 import csv
@@ -44,6 +53,10 @@ class FlowerClient(NumPyClient):
             self.trainloader, self.testloader = load_data_B()  # Usa la funzione corretta per taskB
             self.device = DEVICE_B
 
+    def get_properties(self, config: Dict[str, Scalar]) -> Dict[str, Scalar]:
+        # Return client properties including model_type
+        return {"model_type": self.model_type}
+
     def fit(self, parameters, config):
         print(f"CLIENT {self.cid} ({self.model_type}): Starting training.", flush=True)
         cpu_start = psutil.cpu_percent(interval=None)
@@ -54,9 +67,11 @@ class FlowerClient(NumPyClient):
         if self.model_type == "taskA":
             set_weights_A(self.net, parameters)
             results, training_time = train_A(self.net, self.trainloader, self.testloader, epochs=1, device=self.device)
+            new_parameters = get_weights_A(self.net)
         elif self.model_type == "taskB":
             set_weights_B(self.net, parameters)
             results, training_time = train_B(self.net, self.trainloader, self.testloader, epochs=1, device=self.device)
+            new_parameters = get_weights_B(self.net)
 
         comm_end_time = time.time()
 
@@ -79,12 +94,7 @@ class FlowerClient(NumPyClient):
             "model_type": self.model_type,  # Aggiungi questa linea
         }
 
-        if self.model_type == "taskA":
-            return get_weights_A(self.net), len(self.trainloader.dataset), metrics
-        elif self.model_type == "taskB":
-            return get_weights_B(self.net), len(self.trainloader.dataset), metrics
-        else:
-            raise ValueError(f"Unknown model type: {self.model_type}")
+        return new_parameters, len(self.trainloader.dataset), metrics
 
     def evaluate(self, parameters, config):
         print(f"CLIENT {self.cid} ({self.model_type}): Starting evaluation.", flush=True)
@@ -116,7 +126,6 @@ def client_fn(context: Context):
 
     return FlowerClient(cid=cid).to_client()
 
-
 app = ClientApp(client_fn=client_fn)
 
 if __name__ == "__main__":
@@ -130,6 +139,5 @@ if __name__ == "__main__":
 
     start_client(
         server_address="127.0.0.1:8080",
-        client=FlowerClient(cid=cid).to_client(),
-        strategy=strategy,
+        client=FlowerClient(cid=cid),
     )
