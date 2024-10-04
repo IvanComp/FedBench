@@ -1,0 +1,28 @@
+
+Build:
+docker build -t server -f Dockerfile.server .
+docker build -t clienta -f Dockerfile.clienta .
+docker build -t clientb -f Dockerfile.clientb .
+
+
+Run:
+docker network create mynetwork
+docker network connect mynetwork server
+docker run -d --name server -p 8080:8080 server
+
+Test 4 Clients
+docker run -d --name clienta-1 --network mynetwork --cpus="2.6" clienta
+docker run -d --name clienta-2 --network mynetwork --cpus="2.6" clienta
+
+docker run -d --name clientb-1 --network mynetwork --cpus="2.6" clientb
+docker run -d --name clientb-2 --network mynetwork --cpus="2.6" clientb
+
+
+Test 6 Clients
+docker run -d --name clienta-1 --network mynetwork --cpus="1.5" clienta
+docker run -d --name clienta-2 --network mynetwork --cpus="1.5" clienta
+docker run -d --name clienta-3 --network mynetwork --cpus="1.5" clienta
+
+docker run -d --name clientb-1 --network mynetwork --cpus="1.5" clientb
+docker run -d --name clientb-2 --network mynetwork --cpus="1.5" clientb
+docker run -d --name clientb-3 --network mynetwork --cpus="1.5" clientb

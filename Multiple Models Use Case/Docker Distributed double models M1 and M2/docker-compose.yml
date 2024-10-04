@@ -1,0 +1,57 @@
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    container_name: flwr_server
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+      - ./performance:/app/performance
+    networks:
+      - flwr_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'   
+
+  clienta:
+    build:
+      context: .
+      dockerfile: Dockerfile.clienta
+    depends_on:
+      - server
+    networks:
+      - flwr_network
+    volumes:
+      - ./data:/app/data
+      - ./performance:/app/performance
+    #environment:
+    #  - GRPC_ENABLE_FORK_SUPPORT=0
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+
+  clientb:
+    build:
+      context: .
+      dockerfile: Dockerfile.clientb
+    depends_on:
+      - server
+    networks:
+      - flwr_network
+    volumes:
+      - ./data:/app/data
+      - ./performance:/app/performance
+    #environment:
+    #  - GRPC_ENABLE_FORK_SUPPORT=0
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+
+networks:
+  flwr_network:
+    driver: bridge
