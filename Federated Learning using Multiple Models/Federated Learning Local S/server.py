@@ -10,19 +10,15 @@ from flwr.common import (
     Context,
     FitIns,
     EvaluateIns,
-    GetPropertiesIns,
-    GetPropertiesRes,
 )
 from flwr.server import (
     ServerConfig,
     ServerApp,
     ServerAppComponents,
-    start_server
 )
 from flwr.server.strategy import Strategy
 from flwr.server.client_manager import ClientManager
 from flwr.server.client_proxy import ClientProxy
-from flwr.common.logger import log
 
 from taskA import Net as NetA, get_weights as get_weights_A
 from taskB import Net as NetB, get_weights as get_weights_B
@@ -48,7 +44,7 @@ matplotlib.use('Agg')
 current_dir = os.path.abspath(os.path.dirname(__file__))
 
 currentRnd = 0
-num_rounds = 2
+num_rounds = 3
 
 performance_dir = './performance/'
 if not os.path.exists(performance_dir):
@@ -200,24 +196,19 @@ def weighted_average_global(metrics: List[Tuple[int, Metrics]], task_type: str) 
     global_metrics[task_type]["val_loss"].append(avg_val_loss)
     global_metrics[task_type]["val_accuracy"].append(avg_val_accuracy)
 
-    
-
     for num_examples, m in metrics:
         client_id = m.get("client_id")
-        model_type = m.get("model_type")  # Extract model_type
+        model_type = m.get("model_type")
         training_time = m.get("training_time")
         communication_time = m.get("communication_time")
         cpu_usage = m.get("cpu_usage")
-
+       
         if client_id:
             if not client_registry.is_registered(client_id):
-                client_registry.register_client(client_id, {})
-
-            # Print model_type on the server
-            print(f"Received model_type from Client {client_id}: {model_type}")
+                client_registry.register_client(client_id, model_type)
 
             # Log including model_type
-            log_round_time(client_id, currentRnd, training_time, communication_time, cpu_usage, model_type)
+            log_round_time(client_id, currentRnd, training_time, communication_time, cpu_usage, client_registry.get_client_model(client_id))
 
     return {
         "train_loss": avg_train_loss,
@@ -231,17 +222,29 @@ parametersA = ndarrays_to_parameters(get_weights_A(NetA()))
 parametersB = ndarrays_to_parameters(get_weights_B(NetB()))
 
 def print_final_results():
+    # Collect clients for each task using cid
+    clients_taskA = [cid for cid, model in client_model_mapping.items() if model == "taskA"]
+    clients_taskB = [cid for cid, model in client_model_mapping.items() if model == "taskB"]
+
     print("\nFinal results for taskA:")
+    print(f"  Clients: {clients_taskA}")
     print(f"  Train loss: {global_metrics['taskA']['train_loss']}")
     print(f"  Train accuracy: {global_metrics['taskA']['train_accuracy']}")
     print(f"  Val loss: {global_metrics['taskA']['val_loss']}")
     print(f"  Val accuracy: {global_metrics['taskA']['val_accuracy']}")
 
     print("\nFinal results for taskB:")
+    print(f"  Clients: {clients_taskB}")
     print(f"  Train loss: {global_metrics['taskB']['train_loss']}")
     print(f"  Train accuracy: {global_metrics['taskB']['train_accuracy']}")
     print(f"  Val loss: {global_metrics['taskB']['val_loss']}")
     print(f"  Val accuracy: {global_metrics['taskB']['val_accuracy']}")
+
+# Initialize the client_model_mapping dictionary
+client_model_mapping = {}
+
+# Map to keep track of original client IDs
+cid_to_original_id = {}
 
 # Definition of the custom strategy
 class MultiModelStrategy(Strategy):
@@ -259,30 +262,17 @@ class MultiModelStrategy(Strategy):
         parameters: Parameters,
         client_manager: ClientManager,
     ) -> List[Tuple[ClientProxy, FitIns]]:
-        # Divide clients based on the model they are training
         clients = client_manager.sample(num_clients=client_manager.num_available())
         fit_configurations = []
 
         for client in clients:
-            # Create GetPropertiesIns object
-            get_properties_ins = GetPropertiesIns(config={})
-            # Call get_properties with required arguments
-            properties_res = client.get_properties(
-                ins=get_properties_ins,
-                timeout=None,
-                # Provide group_id if required; use None or an empty string if not applicable
-                group_id=None,
-            )
-            properties = properties_res.properties
-
-            model_type = properties.get("model_type", "taskA")
+            client_id = client.cid
+            model_type = client_model_mapping.get(client_id)
 
             if model_type == "taskA":
                 fit_ins = FitIns(self.parameters_a, {})
-            elif model_type == "taskB":
-                fit_ins = FitIns(self.parameters_b, {})
             else:
-                continue  # Skip client if model_type is not recognized
+                fit_ins = FitIns(self.parameters_b, {})
 
             fit_configurations.append((client, fit_ins))
 
@@ -294,26 +284,33 @@ class MultiModelStrategy(Strategy):
             results: List[Tuple[ClientProxy, FitRes]],
             failures: List[BaseException],
         ) -> Optional[Tuple[Parameters, Dict[str, Scalar]]]:
-            # Separare i risultati per tipo di modello
+            # Separate results per model type
             results_a = []
             results_b = []
-            
+
             for client_proxy, fit_res in results:
+                # Use client_id from metrics
+                client_id = fit_res.metrics.get("client_id")  # This should be the 4-character cid
                 model_type = fit_res.metrics.get("model_type")
+                client_model_mapping[client_id] = model_type  # Update the model_type mapping
+
                 if model_type == "taskA":
                     results_a.append((fit_res.parameters, fit_res.num_examples, fit_res.metrics))
                 elif model_type == "taskB":
                     results_b.append((fit_res.parameters, fit_res.num_examples, fit_res.metrics))
+                else:
+                    # Handle unknown model_type if necessary
+                    continue
             
-            # Aggregare i parametri per taskA
+            # Aggregate parameters for taskA
             if results_a:
                 self.parameters_a = self.aggregate_parameters(results_a, "taskA")
             
-            # Aggregare i parametri per taskB
+            # Aggregate parameters for taskB
             if results_b:
                 self.parameters_b = self.aggregate_parameters(results_b, "taskB")
             
-            # Combinare le metriche aggregate
+            # Combine aggregated metrics
             metrics_aggregated = {
                 "taskA": {
                     "train_loss": global_metrics["taskA"]["train_loss"][-1],
@@ -341,8 +338,8 @@ class MultiModelStrategy(Strategy):
                 client_registry.print_clients_info()
                 print_final_results()
                 
-            # Restituiamo i parametri per uno dei modelli per evitare l'errore
-            # Se non vuoi aggiornare i parametri globali, puoi restituire i parametri attuali
+            # Return one of the parameter sets (as Flower expects a single Parameters object)
+            # Alternatively, you might consider modifying Flower to handle multiple models
             return self.parameters_a, metrics_aggregated
 
     def aggregate_parameters(self, results, task_type):

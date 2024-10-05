@@ -1,0 +1,98 @@
+{
+    "c638": {
+        "model_type": {},
+        "system_info": {
+            "platform": "Darwin",
+            "platform_version": "Darwin Kernel Version 24.0.0: Tue Sep 24 23:37:25 PDT 2024; root:xnu-11215.1.12~1/RELEASE_ARM64_T6030",
+            "architecture": "arm64",
+            "cpu": "arm",
+            "cpu_count": 11,
+            "cpu_threads": 11,
+            "ram_total": 18.0,
+            "ram_available": 7.6209564208984375,
+            "python_version": "3.12.6"
+        },
+        "active": true,
+        "last_update": "2024-10-05T18:57:00.665712"
+    },
+    "c60f": {
+        "model_type": {},
+        "system_info": {
+            "platform": "Darwin",
+            "platform_version": "Darwin Kernel Version 24.0.0: Tue Sep 24 23:37:25 PDT 2024; root:xnu-11215.1.12~1/RELEASE_ARM64_T6030",
+            "architecture": "arm64",
+            "cpu": "arm",
+            "cpu_count": 11,
+            "cpu_threads": 11,
+            "ram_total": 18.0,
+            "ram_available": 7.621002197265625,
+            "python_version": "3.12.6"
+        },
+        "active": true,
+        "last_update": "2024-10-05T18:57:00.670344"
+    },
+    "f365": {
+        "model_type": {},
+        "system_info": {
+            "platform": "Darwin",
+            "platform_version": "Darwin Kernel Version 24.0.0: Tue Sep 24 23:37:25 PDT 2024; root:xnu-11215.1.12~1/RELEASE_ARM64_T6030",
+            "architecture": "arm64",
+            "cpu": "arm",
+            "cpu_count": 11,
+            "cpu_threads": 11,
+            "ram_total": 18.0,
+            "ram_available": 7.621002197265625,
+            "python_version": "3.12.6"
+        },
+        "active": true,
+        "last_update": "2024-10-05T18:57:00.664712"
+    },
+    "3e67": {
+        "model_type": {},
+        "system_info": {
+            "platform": "Darwin",
+            "platform_version": "Darwin Kernel Version 24.0.0: Tue Sep 24 23:37:25 PDT 2024; root:xnu-11215.1.12~1/RELEASE_ARM64_T6030",
+            "architecture": "arm64",
+            "cpu": "arm",
+            "cpu_count": 11,
+            "cpu_threads": 11,
+            "ram_total": 18.0,
+            "ram_available": 7.621002197265625,
+            "python_version": "3.12.6"
+        },
+        "active": true,
+        "last_update": "2024-10-05T18:57:00.670952"
+    },
+    "60a2": {
+        "model_type": {},
+        "system_info": {
+            "platform": "Darwin",
+            "platform_version": "Darwin Kernel Version 24.0.0: Tue Sep 24 23:37:25 PDT 2024; root:xnu-11215.1.12~1/RELEASE_ARM64_T6030",
+            "architecture": "arm64",
+            "cpu": "arm",
+            "cpu_count": 11,
+            "cpu_threads": 11,
+            "ram_total": 18.0,
+            "ram_available": 7.621002197265625,
+            "python_version": "3.12.6"
+        },
+        "active": true,
+        "last_update": "2024-10-05T18:57:00.671454"
+    },
+    "bda1": {
+        "model_type": {},
+        "system_info": {
+            "platform": "Darwin",
+            "platform_version": "Darwin Kernel Version 24.0.0: Tue Sep 24 23:37:25 PDT 2024; root:xnu-11215.1.12~1/RELEASE_ARM64_T6030",
+            "architecture": "arm64",
+            "cpu": "arm",
+            "cpu_count": 11,
+            "cpu_threads": 11,
+            "ram_total": 18.0,
+            "ram_available": 7.621002197265625,
+            "python_version": "3.12.6"
+        },
+        "active": true,
+        "last_update": "2024-10-05T18:57:00.671894"
+    }
+}

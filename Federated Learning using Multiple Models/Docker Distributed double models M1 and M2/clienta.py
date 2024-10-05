@@ -1,11 +1,10 @@
+# Client.py
 from flwr.client import ClientApp, NumPyClient
 from flwr.common import (
     parameters_to_ndarrays,
     ndarrays_to_parameters,
     Scalar,
     Context,
-    GetPropertiesIns,
-    GetPropertiesRes,
 )
 from typing import Dict
 import time
@@ -14,13 +13,30 @@ import csv
 import os
 import hashlib
 import psutil
-import platform
+import random
 import torch
-from taskA import DEVICE as DEVICE_A, Net as NetA, get_weights as get_weights_A, load_data as load_data_A, set_weights as set_weights_A, train as train_A, test as test_A
-from taskB import DEVICE as DEVICE_B, Net as NetB, get_weights as get_weights_B, load_data as load_data_B, set_weights as set_weights_B, train as train_B, test as test_B
+from taskA import (
+    DEVICE as DEVICE_A,
+    Net as NetA,
+    get_weights as get_weights_A,
+    load_data as load_data_A,
+    set_weights as set_weights_A,
+    train as train_A,
+    test as test_A
+)
+from taskB import (
+    DEVICE as DEVICE_B,
+    Net as NetB,
+    get_weights as get_weights_B,
+    load_data as load_data_B,
+    set_weights as set_weights_B,
+    train as train_B,
+    test as test_B
+)
 
 from APClient import ClientRegistry
 
+# Istanzia un'unica istanza di ClientRegistry per il client
 client_registry = ClientRegistry()
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -36,11 +52,13 @@ if not os.path.exists(csv_file):
         writer = csv.writer(file)
         writer.writerow(['Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Time', 'CPU Usage (%)', 'Task'])
 
-
 class FlowerClient(NumPyClient):
-    def __init__(self, cid):
+    def __init__(self, cid, model_type):
         self.cid = cid
-        self.model_type = client_registry.get_client_model(self.cid)
+        self.model_type = model_type
+
+        # Registra il client con il model_type assegnato
+        client_registry.register_client(self.cid, self.model_type)
 
         # Imposta il modello, il device e i loader in base al tipo di modello
         if self.model_type == "taskA":
@@ -51,10 +69,8 @@ class FlowerClient(NumPyClient):
             self.net = NetB().to(DEVICE_B)
             self.trainloader, self.testloader = load_data_B()  # Usa la funzione corretta per taskB
             self.device = DEVICE_B
-
-    def get_properties(self, config: Dict[str, Scalar]) -> Dict[str, Scalar]:
-        # Return client properties including model_type
-        return {"model_type": self.model_type}
+        else:
+            raise ValueError(f"Unknown model type: {self.model_type}")
 
     def fit(self, parameters, config):
         print(f"CLIENT {self.cid} ({self.model_type}): Starting training.", flush=True)
@@ -90,7 +106,7 @@ class FlowerClient(NumPyClient):
             "total_time": total_time,
             "cpu_usage": cpu_usage,
             "client_id": self.cid,
-            "model_type": self.model_type,  # Aggiungi questa linea
+            "model_type": self.model_type,
         }
 
         return new_parameters, len(self.trainloader.dataset), metrics
@@ -112,31 +128,24 @@ class FlowerClient(NumPyClient):
         metrics = {
             "accuracy": accuracy,
             "client_id": self.cid,
-            "model_type": self.model_type,  # Aggiungi questa linea
+            "model_type": self.model_type,
         }
         return loss, len(self.testloader.dataset), metrics
 
-def client_fn(context: Context):
+if __name__ == "__main__":
+    from flwr.client import start_client
+    
     original_cid = context.node_id
     original_cid_str = str(original_cid)
 
     hash_object = hashlib.md5(original_cid_str.encode())
     cid = hash_object.hexdigest()[:4]
 
-    return FlowerClient(cid=cid).to_client()
-
-app = ClientApp(client_fn=client_fn)
-
-if __name__ == "__main__":
-    from flwr.client import start_client
-
-    original_cid = "1234567890"
-    original_cid_str = str(original_cid)
-
-    hash_object = hashlib.md5(original_cid_str.encode())
-    cid = hash_object.hexdigest()[:4]
+    # Assegna staticamente "taskA" come model_type
+    model_type = "taskA"
+    print(f"Creazione del client con original_cid: {original_cid_str}, assegnato cid: {cid}, model_type: {model_type}")
 
     start_client(
-        server_address="127.0.0.1:8080",
-        client=FlowerClient(cid=cid),
+        server_address="server:8080",
+        client=FlowerClient(cid=cid).to_client(),
     )

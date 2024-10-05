@@ -7,9 +7,6 @@ class ClientRegistry:
         self.registry = {}
 
     def get_client_info(self):
-
-        cpu_count = psutil.cpu_count(logical=False)  # Physical cores
-
         """Gathers system information about the client."""
         info = {
             "platform": platform.system(),
@@ -24,44 +21,38 @@ class ClientRegistry:
         }
         return info
 
-    def register_client(self, cid, resource_info):
-        """Registers a new client with its cid and detailed system information."""
+    def register_client(self, cid, model_type):
+        """Registers a new client with its cid and assigned model_type."""
+        if cid in self.registry:
+            print(f"[WARNING] Client {cid} è già registrato.")
+            return
+
         client_info = self.get_client_info()
         self.registry[cid] = {
-            'resources': resource_info,
+            'model_type': model_type,
             'system_info': client_info,  # Save the system info
             'active': True,
             'last_update': datetime.now()
         }
-        print(f"Client {cid} registered with resources: {resource_info}")
-        print(f"System info: {client_info}")
+        print(f"[DEBUG] Client {cid} registrato con model_type: {model_type}")
+        print(f"[DEBUG] Informazioni di sistema: {client_info}")
 
     def get_client_model(self, cid):
         """Returns the model assigned to the client (taskA or taskB) based on cid."""
-        if cid in self.registry:
-            return self.registry[cid]['resources'].get("model_type", "taskA")
+        client = self.registry.get(cid)
+        if client:
+            return client['model_type']
         else:
-            # Contare il numero corrente di taskA e taskB
-            taskA_count = sum(1 for client in self.registry.values()
-                              if client['resources'].get("model_type") == "taskA")
-            taskB_count = sum(1 for client in self.registry.values()
-                              if client['resources'].get("model_type") == "taskB")
-
-            # Decidere il model_type basato sui conteggi
-            if taskA_count < taskB_count or (taskA_count == taskB_count):
-                model_type = "taskA"
-            else:
-                model_type = "taskB"
-
-            # Registrare il client con il model_type assegnato
-            self.register_client(cid, {"model_type": model_type})
-            return model_type
+            print(f"[ERROR] Client {cid} non è registrato.")
+            return None
 
     def update_client(self, cid, status, last_update=None):
         """Updates the status of the client."""
         if cid in self.registry:
             self.registry[cid]['active'] = status
             self.registry[cid]['last_update'] = last_update or datetime.now()
+        else:
+            print(f"[WARNING] Tentativo di aggiornare un client non registrato: {cid}")
 
     def get_active_clients(self):
         """Returns the list of active clients."""
