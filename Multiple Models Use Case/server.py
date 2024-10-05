@@ -1,5 +1,3 @@
-# Server.py
-
 from typing import List, Tuple, Dict, Optional
 from flwr.common import (
     Metrics,
@@ -19,6 +17,7 @@ from flwr.server import (
     ServerConfig,
     ServerApp,
     ServerAppComponents,
+    start_server
 )
 from flwr.server.strategy import Strategy
 from flwr.server.client_manager import ClientManager
@@ -201,8 +200,7 @@ def weighted_average_global(metrics: List[Tuple[int, Metrics]], task_type: str) 
     global_metrics[task_type]["val_loss"].append(avg_val_loss)
     global_metrics[task_type]["val_accuracy"].append(avg_val_accuracy)
 
-    global currentRnd
-    currentRnd += 1
+    
 
     for num_examples, m in metrics:
         client_id = m.get("client_id")
@@ -220,15 +218,6 @@ def weighted_average_global(metrics: List[Tuple[int, Metrics]], task_type: str) 
 
             # Log including model_type
             log_round_time(client_id, currentRnd, training_time, communication_time, cpu_usage, model_type)
-
-    if currentRnd == num_rounds:
-        generate_performance_graphs()
-        generate_cpu_usage_graph()
-        generate_total_time_graph()
-        generate_training_time_graph()
-        generate_communication_time_graph()
-        client_registry.print_clients_info()
-        print_final_results()
 
     return {
         "train_loss": avg_train_loss,
@@ -340,6 +329,18 @@ class MultiModelStrategy(Strategy):
                 },
             }
             
+            global currentRnd
+            currentRnd += 1
+
+            if currentRnd == num_rounds:
+                generate_performance_graphs()
+                generate_cpu_usage_graph()
+                generate_total_time_graph()
+                generate_training_time_graph()
+                generate_communication_time_graph()
+                client_registry.print_clients_info()
+                print_final_results()
+                
             # Restituiamo i parametri per uno dei modelli per evitare l'errore
             # Se non vuoi aggiornare i parametri globali, puoi restituire i parametri attuali
             return self.parameters_a, metrics_aggregated
@@ -392,7 +393,8 @@ class MultiModelStrategy(Strategy):
 
 def server_fn(context: Context):
     strategy = MultiModelStrategy(initial_parameters_a=parametersA, initial_parameters_b=parametersB)
-    return ServerAppComponents(strategy=strategy)
+    server_config = ServerConfig(num_rounds=num_rounds)
+    return ServerAppComponents(strategy=strategy, config=server_config)
 
 app = ServerApp(server_fn=server_fn)
 
