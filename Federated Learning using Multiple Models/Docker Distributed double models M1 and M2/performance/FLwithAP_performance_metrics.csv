@@ -1,1 +1,5 @@
 Client ID,FL Round,Training Time,Communication Time,Total Time,CPU Usage (%),Task
+client 1,1,165.93,377.35,543.27,44.1,taskA
+client 2,1,359.0,603.91,962.91,40.400000000000006,taskA
+client 3,1,286.49,558.42,844.91,41.75,taskB
+client 4,1,301.11,547.33,848.44,41.95,taskB

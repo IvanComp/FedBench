@@ -39,7 +39,7 @@ performance_dir = './performance/'
 if not os.path.exists(performance_dir):
     os.makedirs(performance_dir)
 
-csv_file = os.path.join(performance_dir, 'FLwithAP_performance_metrics.csv')
+csv_file = os.path.join(performance_dir, '/FLwithAP_performance_metrics.csv')
 if not os.path.exists(csv_file):
     with open(csv_file, 'w', newline='') as file:
         writer = csv.writer(file)

@@ -34,7 +34,6 @@ class ClientRegistry:
             'active': True,
             'last_update': datetime.now()
         }
-        print(f"[DEBUG] Client {cid} registrato con model_type: {model_type}")
 
     def get_client_model(self, cid):
         """Returns the model assigned to the client (taskA or taskB) based on cid."""

@@ -69,12 +69,12 @@ def measure_communication_time(start_time, end_time):
 def log_round_time(client_id, fl_round, training_time, communication_time, cpu_usage, model_type):
     total_time = training_time + communication_time
     print(
-        f"CLIENT {client_id} ({model_type}): Round {fl_round} completed with total time {total_time:.2f} seconds and CPU usage {cpu_usage:.2f}%"
+        f"CLIENT {client_id} ({model_type}): Round {fl_round+1} completed with: Training Time {training_time:.2f} seconds, Communication Time {communication_time:.2f} seconds, Total Time {total_time:.2f} seconds, and average CPU usage of {cpu_usage:.2f}%"
     )
 
     with open(csv_file, 'a', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow([client_id, fl_round, training_time, communication_time, total_time, cpu_usage, model_type])
+        writer.writerow([client_id, fl_round+1, training_time, communication_time, total_time, cpu_usage, model_type])
 
     client_registry.update_client(client_id, True)
 
@@ -83,6 +83,7 @@ def generate_performance_graphs():
     sns.set_theme(style="ticks")
 
     df = pd.read_csv(csv_file)
+    print(df.head())  # Debugging: verifica contenuto CSV
 
     unique_clients = df['Client ID'].unique()
     client_mapping = {original_id: f"client {i + 1}" for i, original_id in enumerate(unique_clients)}
@@ -104,7 +105,15 @@ def generate_performance_graphs():
     plt.tight_layout()
 
     graph_path = os.path.join(performance_dir, 'performance_metrics.pdf')
+    print(f"Salvando il grafico in: {graph_path}")  # Debugging: verifica percorso salvataggio
     plt.savefig(graph_path, format="pdf")
+    
+    # Verifica se il file è stato creato
+    if os.path.exists(graph_path):
+        print(f"Il grafico è stato creato correttamente in {graph_path}")
+    else:
+        print(f"Errore: il file {graph_path} non è stato creato.")
+        
     plt.close()
 
 # Function to generate CPU usage graph
@@ -120,7 +129,14 @@ def generate_cpu_usage_graph():
     plt.tight_layout()
 
     cpu_graph_path = os.path.join(performance_dir, 'cpu_usage_per_client.pdf')
+    print(f"Salvando il grafico in: {cpu_graph_path}")
     plt.savefig(cpu_graph_path, format="pdf")
+    
+    if os.path.exists(cpu_graph_path):
+        print(f"Il grafico è stato creato correttamente in {cpu_graph_path}")
+    else:
+        print(f"Errore: il file {cpu_graph_path} non è stato creato.")
+        
     plt.close()
 
 # Function to generate total time graph
@@ -136,7 +152,14 @@ def generate_total_time_graph():
     plt.tight_layout()
 
     line_graph_path = os.path.join(performance_dir, 'totalTime_round.pdf')
+    print(f"Salvando il grafico in: {line_graph_path}")
     plt.savefig(line_graph_path, format="pdf")
+    
+    if os.path.exists(line_graph_path):
+        print(f"Il grafico è stato creato correttamente in {line_graph_path}")
+    else:
+        print(f"Errore: il file {line_graph_path} non è stato creato.")
+        
     plt.close()
 
 # Function to generate training time graph
@@ -152,7 +175,14 @@ def generate_training_time_graph():
     plt.tight_layout()
 
     line_graph_path = os.path.join(performance_dir, 'trainingTime_round.pdf')
+    print(f"Salvando il grafico in: {line_graph_path}")
     plt.savefig(line_graph_path, format="pdf")
+    
+    if os.path.exists(line_graph_path):
+        print(f"Il grafico è stato creato correttamente in {line_graph_path}")
+    else:
+        print(f"Errore: il file {line_graph_path} non è stato creato.")
+        
     plt.close()
 
 # Function to generate communication time graph
@@ -168,7 +198,14 @@ def generate_communication_time_graph():
     plt.tight_layout()
 
     line_graph_path = os.path.join(performance_dir, 'communicationTime_round.pdf')
+    print(f"Salvando il grafico in: {line_graph_path}")
     plt.savefig(line_graph_path, format="pdf")
+    
+    if os.path.exists(line_graph_path):
+        print(f"Il grafico è stato creato correttamente in {line_graph_path}")
+    else:
+        print(f"Errore: il file {line_graph_path} non è stato creato.")
+        
     plt.close()
 
 
@@ -239,20 +276,16 @@ def print_final_results():
     print(f"  Train loss: {global_metrics['taskB']['train_loss']}")
     print(f"  Train accuracy: {global_metrics['taskB']['train_accuracy']}")
     print(f"  Val loss: {global_metrics['taskB']['val_loss']}")
-    print(f"  Val accuracy: {global_metrics['taskB']['val_accuracy']}")
+    print(f"  Val accuracy: {global_metrics['taskB']['val_accuracy']}\n")
 
 # Initialize the client_model_mapping dictionary
 client_model_mapping = {}
-
-# Map to keep track of original client IDs
-cid_to_original_id = {}
 
 # Definition of the custom strategy
 class MultiModelStrategy(Strategy):
     def __init__(self, initial_parameters_a: Parameters, initial_parameters_b: Parameters):
         self.parameters_a = initial_parameters_a
         self.parameters_b = initial_parameters_b
-        print("Sending Requests to Clients")
 
     def initialize_parameters(self, client_manager: ClientManager) -> Optional[Parameters]:
         # Return None because we use separate initial parameters for A and B
@@ -269,6 +302,7 @@ class MultiModelStrategy(Strategy):
 
         # Attendi finché non ci sono abbastanza client
         while client_manager.num_available() < min_clients:
+            print("[Clients Registered. Sending Model Parameters to Clients...]")
             time.sleep(1)  
 
         # Campiona i client disponibili dopo aver raggiunto il numero minimo
@@ -341,16 +375,24 @@ class MultiModelStrategy(Strategy):
             currentRnd += 1
 
             if currentRnd == num_rounds:
+                print("Inizio generazione grafici...")
                 generate_performance_graphs()
+                print("Grafico delle performance generato.")
+                
                 generate_cpu_usage_graph()
+                print("Grafico utilizzo CPU generato.")
+                
                 generate_total_time_graph()
+                print("Grafico del tempo totale generato.")
+                
                 generate_training_time_graph()
+                print("Grafico del tempo di training generato.")
+                
                 generate_communication_time_graph()
-                #client_registry.print_clients_info()
+                print("Grafico del tempo di comunicazione generato.")
+                
                 print_final_results()
                 
-            # Return one of the parameter sets (as Flower expects a single Parameters object)
-            # Alternatively, you might consider modifying Flower to handle multiple models
             return self.parameters_a, metrics_aggregated
 
     def aggregate_parameters(self, results, task_type):
@@ -379,7 +421,6 @@ class MultiModelStrategy(Strategy):
         parameters: Parameters,
         client_manager: ClientManager,
     ) -> List[Tuple[ClientProxy, EvaluateIns]]:
-        # Implement if necessary
         return []
 
     def aggregate_evaluate(
@@ -388,7 +429,6 @@ class MultiModelStrategy(Strategy):
         results: List[Tuple[ClientProxy, EvaluateRes]],
         failures: List[BaseException],
     ) -> Optional[float]:
-        # Implement if necessary
         return None
 
     def evaluate(
@@ -396,7 +436,6 @@ class MultiModelStrategy(Strategy):
         server_round: int,
         parameters: Parameters,
     ) -> Optional[Tuple[float, Dict[str, Scalar]]]:
-        # Implement if necessary
         return None
 
 if __name__ == "__main__":
