@@ -15,6 +15,7 @@ from flwr.server import (
     ServerConfig,
     ServerApp,
     ServerAppComponents,
+    start_server
 )
 from flwr.server.strategy import Strategy
 from flwr.server.client_manager import ClientManager
@@ -202,13 +203,13 @@ def weighted_average_global(metrics: List[Tuple[int, Metrics]], task_type: str) 
         training_time = m.get("training_time")
         communication_time = m.get("communication_time")
         cpu_usage = m.get("cpu_usage")
-
+       
         if client_id:
             if not client_registry.is_registered(client_id):
-                client_registry.register_client(client_id, {})
+                client_registry.register_client(client_id, model_type)
 
             # Log including model_type
-            log_round_time(client_id, currentRnd, training_time, communication_time, cpu_usage, model_type)
+            log_round_time(client_id, currentRnd, training_time, communication_time, cpu_usage, client_registry.get_client_model(client_id))
 
     return {
         "train_loss": avg_train_loss,
@@ -251,6 +252,7 @@ class MultiModelStrategy(Strategy):
     def __init__(self, initial_parameters_a: Parameters, initial_parameters_b: Parameters):
         self.parameters_a = initial_parameters_a
         self.parameters_b = initial_parameters_b
+        print("Sending Requests to Clients")
 
     def initialize_parameters(self, client_manager: ClientManager) -> Optional[Parameters]:
         # Return None because we use separate initial parameters for A and B
@@ -262,7 +264,16 @@ class MultiModelStrategy(Strategy):
         parameters: Parameters,
         client_manager: ClientManager,
     ) -> List[Tuple[ClientProxy, FitIns]]:
-        clients = client_manager.sample(num_clients=client_manager.num_available())
+        # Numero minimo di client che vuoi aspettare
+        min_clients = 4
+
+        # Attendi finché non ci sono abbastanza client
+        while client_manager.num_available() < min_clients:
+            time.sleep(1)  
+
+        # Campiona i client disponibili dopo aver raggiunto il numero minimo
+        clients = client_manager.sample(num_clients=min_clients)
+
         fit_configurations = []
 
         for client in clients:
@@ -335,7 +346,7 @@ class MultiModelStrategy(Strategy):
                 generate_total_time_graph()
                 generate_training_time_graph()
                 generate_communication_time_graph()
-                client_registry.print_clients_info()
+                #client_registry.print_clients_info()
                 print_final_results()
                 
             # Return one of the parameter sets (as Flower expects a single Parameters object)
@@ -388,18 +399,15 @@ class MultiModelStrategy(Strategy):
         # Implement if necessary
         return None
 
-def server_fn(context: Context):
-    strategy = MultiModelStrategy(initial_parameters_a=parametersA, initial_parameters_b=parametersB)
-    server_config = ServerConfig(num_rounds=num_rounds)
-    return ServerAppComponents(strategy=strategy, config=server_config)
-
-app = ServerApp(server_fn=server_fn)
-
 if __name__ == "__main__":
-    from flwr.server import start_server
+    
+    strategy = MultiModelStrategy(
+        initial_parameters_a=parametersA,  
+        initial_parameters_b=parametersB,  
+    )
 
-    # Start the server with the custom strategy
     start_server(
-        server_address="[::]:8080",
-        config=ServerConfig(num_rounds=num_rounds),
+        server_address="[::]:8080",  
+        config=ServerConfig(num_rounds=num_rounds),  
+        strategy=strategy, 
     )

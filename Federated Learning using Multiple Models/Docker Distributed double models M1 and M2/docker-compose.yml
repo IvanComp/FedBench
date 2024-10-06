@@ -1,4 +1,3 @@
-version: '3'
 services:
   server:
     build:
@@ -15,7 +14,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.5'
+          cpus: '0.5'   
 
   clienta:
     build:
@@ -28,6 +27,8 @@ services:
     volumes:
       - ./data:/app/data
       - ./performance:/app/performance
+    #environment:
+    #  - GRPC_ENABLE_FORK_SUPPORT=0
     deploy:
       resources:
         limits:
@@ -44,6 +45,8 @@ services:
     volumes:
       - ./data:/app/data
       - ./performance:/app/performance
+    #environment:
+    #  - GRPC_ENABLE_FORK_SUPPORT=0
     deploy:
       resources:
         limits:

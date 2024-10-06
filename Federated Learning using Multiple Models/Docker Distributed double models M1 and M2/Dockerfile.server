@@ -13,9 +13,9 @@ WORKDIR /app
 # Copy the server code
 COPY clienta.py /app/clienta.py
 COPY clientb.py /app/clientb.py
+COPY server.py /app/server.py
 COPY taskA.py /app/taskA.py
 COPY taskB.py /app/taskB.py
-COPY server.py /app/server.py
 COPY APClient.py /app/APClient.py
 COPY performance/ /app/performance/
 COPY data/ /app/data/

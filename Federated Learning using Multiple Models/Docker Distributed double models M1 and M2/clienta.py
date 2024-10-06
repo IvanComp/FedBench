@@ -1,4 +1,3 @@
-# Client.py
 from flwr.client import ClientApp, NumPyClient
 from flwr.common import (
     parameters_to_ndarrays,
@@ -11,6 +10,7 @@ import time
 from datetime import datetime
 import csv
 import os
+import json
 import hashlib
 import psutil
 import random
@@ -24,17 +24,10 @@ from taskA import (
     train as train_A,
     test as test_A
 )
-from taskB import (
-    DEVICE as DEVICE_B,
-    Net as NetB,
-    get_weights as get_weights_B,
-    load_data as load_data_B,
-    set_weights as set_weights_B,
-    train as train_B,
-    test as test_B
-)
 
 from APClient import ClientRegistry
+
+CLIENT_ID = os.getenv("HOSTNAME")
 
 # Istanzia un'unica istanza di ClientRegistry per il client
 client_registry = ClientRegistry()
@@ -54,42 +47,21 @@ if not os.path.exists(csv_file):
 
 class FlowerClient(NumPyClient):
     def __init__(self, cid, model_type):
-        self.cid = cid
+        self.cid = CLIENT_ID
         self.model_type = model_type
-
-        # Registra il client con il model_type assegnato
-        client_registry.register_client(self.cid, self.model_type)
-
-        # Imposta il modello, il device e i loader in base al tipo di modello
-        if self.model_type == "taskA":
-            self.net = NetA().to(DEVICE_A)
-            self.trainloader, self.testloader = load_data_A()  # Usa la funzione corretta per taskA
-            self.device = DEVICE_A
-        elif self.model_type == "taskB":
-            self.net = NetB().to(DEVICE_B)
-            self.trainloader, self.testloader = load_data_B()  # Usa la funzione corretta per taskB
-            self.device = DEVICE_B
-        else:
-            raise ValueError(f"Unknown model type: {self.model_type}")
+        self.net = NetA().to(DEVICE_A)
+        self.trainloader, self.testloader = load_data_A()  
+        self.device = DEVICE_A
 
     def fit(self, parameters, config):
-        print(f"CLIENT {self.cid} ({self.model_type}): Starting training.", flush=True)
+        print(f"CLIENT {self.cid} Succesfully Configured. Target Model: {self.model_type}", flush=True)
         cpu_start = psutil.cpu_percent(interval=None)
 
         comm_start_time = time.time()
-
-        # Impostare i pesi corretti per taskA o taskB
-        if self.model_type == "taskA":
-            set_weights_A(self.net, parameters)
-            results, training_time = train_A(self.net, self.trainloader, self.testloader, epochs=1, device=self.device)
-            new_parameters = get_weights_A(self.net)
-        elif self.model_type == "taskB":
-            set_weights_B(self.net, parameters)
-            results, training_time = train_B(self.net, self.trainloader, self.testloader, epochs=1, device=self.device)
-            new_parameters = get_weights_B(self.net)
-
+        set_weights_A(self.net, parameters)
+        results, training_time = train_A(self.net, self.trainloader, self.testloader, epochs=1, device=self.device)
+        new_parameters = get_weights_A(self.net)
         comm_end_time = time.time()
-
         cpu_end = psutil.cpu_percent(interval=None)
         cpu_usage = (cpu_start + cpu_end) / 2
 
@@ -113,16 +85,8 @@ class FlowerClient(NumPyClient):
 
     def evaluate(self, parameters, config):
         print(f"CLIENT {self.cid} ({self.model_type}): Starting evaluation.", flush=True)
-
-        # Impostare i pesi corretti per taskA o taskB
-        if self.model_type == "taskA":
-            set_weights_A(self.net, parameters)
-            loss, accuracy = test_A(self.net, self.testloader)
-        elif self.model_type == "taskB":
-            set_weights_B(self.net, parameters)
-            loss, accuracy = test_B(self.net, self.testloader)
-        else:
-            raise ValueError(f"Unknown model type: {self.model_type}")
+        set_weights_A(self.net, parameters)
+        loss, accuracy = test_A(self.net, self.testloader)
 
         print(f"CLIENT {self.cid} ({self.model_type}): Evaluation completed", flush=True)
         metrics = {
@@ -132,20 +96,33 @@ class FlowerClient(NumPyClient):
         }
         return loss, len(self.testloader.dataset), metrics
 
-if __name__ == "__main__":
-    from flwr.client import start_client
-    
+def client_fn(context: Context):
     original_cid = context.node_id
-    original_cid_str = str(original_cid)
+    original_cid_str = str(original_cid)  
 
     hash_object = hashlib.md5(original_cid_str.encode())
     cid = hash_object.hexdigest()[:4]
 
-    # Assegna staticamente "taskA" come model_type
-    model_type = "taskA"
-    print(f"Creazione del client con original_cid: {original_cid_str}, assegnato cid: {cid}, model_type: {model_type}")
+    print(f"[DEBUG] Original CID: {original_cid_str}, Hashed CID: {cid}")
+    
+    print(f"[DEBUG] Creazione del client con original_cid: {original_cid_str}, assegnato cid: {cid}, model_type: {model_type}")
+    client_registry.register_client(cid, model_type)  # Registra il client nel registro persistente
 
+    return FlowerClient(cid=cid, model_type=model_type).to_client()
+
+app = ClientApp(client_fn=client_fn)
+
+# Legacy mode
+if __name__ == "__main__":
+    from flwr.client import start_client
+
+    original_cid_str = str(CLIENT_ID)
+    hash_object = hashlib.md5(original_cid_str.encode())
+    cid = hash_object.hexdigest()[:4]
+    model_type = "taskA"
+
+    # Start the Flower client
     start_client(
         server_address="server:8080",
-        client=FlowerClient(cid=cid).to_client(),
+        client=FlowerClient(cid=cid,model_type=model_type).to_client(),
     )

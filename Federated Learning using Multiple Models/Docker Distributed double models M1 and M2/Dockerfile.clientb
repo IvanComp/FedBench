@@ -13,8 +13,8 @@ WORKDIR /app
 # Copy the client code
 COPY clientb.py /app/clientb.py
 COPY server.py /app/server.py
-COPY taskB.py /app/taskB.py
 COPY taskA.py /app/taskA.py
+COPY taskB.py /app/taskB.py
 COPY APClient.py /app/APClient.py
 COPY performance/ /app/performance/
 COPY data/ /app/data/

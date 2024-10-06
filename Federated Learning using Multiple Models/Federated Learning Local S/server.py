@@ -73,7 +73,7 @@ def log_round_time(client_id, fl_round, training_time, communication_time, cpu_u
 
     with open(csv_file, 'a', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow([client_id, fl_round, training_time, communication_time, total_time, cpu_usage, model_type])
+        writer.writerow([client_id, fl_round, training_time, communication_time, total_time, cpu_usage, client_registry.get_client_model(client_id)])
 
     client_registry.update_client(client_id, True)
 
