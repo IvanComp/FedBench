@@ -17,3 +17,39 @@ docker run -d --name clienta-2 --network mynetwork --cpus="2.6" clienta
 
 docker run -d --name clientb-1 --network mynetwork --cpus="2.6" clientb
 docker run -d --name clientb-2 --network mynetwork --cpus="2.6" clientb
+
+
+
+
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - flwr_network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - flwr_network
+    depends_on:
+      - prometheus
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+  node_exporter:
+    image: prom/node-exporter:latest
+    container_name: node_exporter
+    ports:
+      - "9100:9100"
+    networks:
+      - flwr_network

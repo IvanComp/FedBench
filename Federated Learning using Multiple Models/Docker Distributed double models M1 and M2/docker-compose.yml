@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   server:
     build:
@@ -27,8 +29,6 @@ services:
     volumes:
       - ./data:/app/data
       - ./performance:/app/performance
-    #environment:
-    #  - GRPC_ENABLE_FORK_SUPPORT=0
     deploy:
       resources:
         limits:
@@ -45,13 +45,50 @@ services:
     volumes:
       - ./data:/app/data
       - ./performance:/app/performance
-    #environment:
-    #  - GRPC_ENABLE_FORK_SUPPORT=0
     deploy:
       resources:
         limits:
           cpus: '1.5'
 
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    networks:
+      - flwr_network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - flwr_network
+    depends_on:
+      - prometheus
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana.ini:/etc/grafana/grafana.ini
+      - ./config/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./config/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+
+  node_exporter:
+    image: prom/node-exporter:latest
+    container_name: node_exporter
+    ports:
+      - "9100:9100"
+    networks:
+      - flwr_network
+
 networks:
   flwr_network:
     driver: bridge
+
+volumes:
+  grafana_data:
+    driver: local

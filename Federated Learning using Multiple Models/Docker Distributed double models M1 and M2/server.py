@@ -20,7 +20,7 @@ from flwr.server import (
 from flwr.server.strategy import Strategy
 from flwr.server.client_manager import ClientManager
 from flwr.server.client_proxy import ClientProxy
-
+from prometheus_client import Gauge, start_http_server
 from taskA import Net as NetA, get_weights as get_weights_A
 from taskB import Net as NetB, get_weights as get_weights_B
 import time
@@ -43,6 +43,12 @@ global_metrics = {
 # Set the non-interactive backend of matplotlib
 matplotlib.use('Agg')
 current_dir = os.path.abspath(os.path.dirname(__file__))
+
+# Define a gauge to track the global model accuracy
+accuracy_gauge = Gauge("model_accuracy", "Current accuracy of the global model")
+
+# Define a gauge to track the global model loss
+loss_gauge = Gauge("model_loss", "Current loss of the global model")
 
 currentRnd = 0
 num_rounds = 2
@@ -439,6 +445,8 @@ class MultiModelStrategy(Strategy):
         return None
 
 if __name__ == "__main__":
+    # Start Prometheus Metrics Server
+    start_http_server(8000)
     
     strategy = MultiModelStrategy(
         initial_parameters_a=parametersA,  
