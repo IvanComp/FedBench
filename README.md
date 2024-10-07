@@ -22,6 +22,8 @@ This repository is divided in two main folders:
 
 - __Federated Learning using Architectural Patterns/__: Using the Client Manager Architectural Design Patterns.
 
+- __Federated Learning using Multiple Models/__: Using the Client Manager Architectural Design Patterns with multiple models concurrently.
+
 
 # How To Run:
 
