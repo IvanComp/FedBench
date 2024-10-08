@@ -1,0 +1,126 @@
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    container_name: flwr_server
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+      - ./performance:/app/performance
+      - .:/app
+      - /var/run/docker.sock:/var/run/docker.sock 
+    networks:
+      - flwr_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'   
+
+  clienta:
+    build:
+      context: .
+      dockerfile: Dockerfile.clienta
+    depends_on:
+      - server
+    networks:
+      - flwr_network
+    volumes:
+      - ./data:/app/data
+      - ./performance:/app/performance
+    deploy:
+      resources:
+        limits:
+          cpus: '2.5'
+    command: sh -c "sleep 2 && python clienta.py"
+
+  clientb:
+    build:
+      context: .
+      dockerfile: Dockerfile.clientb
+    depends_on:
+      - server
+    networks:
+      - flwr_network
+    volumes:
+      - ./data:/app/data
+      - ./performance:/app/performance
+    deploy:
+      resources:
+        limits:
+          cpus: '2.5'
+    command: sh -c "sleep 2 && python clientb.py"
+    
+#  prometheus:
+#    image: prom/prometheus:latest
+#    container_name: prometheus
+#    privileged: true
+#    volumes:
+#      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+#      - /run/udev/data:/run/udev/data
+#    ports:
+#      - "9090:9090"
+#    networks:
+#      - flwr_network
+#
+#  grafana:
+#    image: grafana/grafana:latest
+#    container_name: grafana
+#    ports:
+#      - "3000:3000"
+#    environment:
+#      - GF_SECURITY_ADMIN_PASSWORD=admin
+#      - GF_LOG_LEVEL=error
+#    networks:
+#      - flwr_network
+#    depends_on:
+#      - prometheus
+#    volumes:
+#      - grafana_data:/var/lib/grafana
+#      - ./config/grafana.ini:/etc/grafana/grafana.ini
+#      - ./config/provisioning/datasources:/etc/grafana/provisioning/datasources
+#      - ./config/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+#
+#  node_exporter:
+#    image: prom/node-exporter:latest
+#    container_name: node_exporter
+#    ports:
+#      - "9100:9100"
+#    networks:
+#      - flwr_network
+#    command:
+#      - '--log.level=error'
+#
+#  cadvisor:
+#    image: gcr.io/cadvisor/cadvisor:v0.50.0
+#    container_name: cadvisor
+#    privileged: true
+#    ports:
+#      - "8082:8080"
+#    volumes:
+#      - /:/rootfs:ro
+#      - /var/run:/var/run:rw
+#      - /var/run:/var/run:ro
+#      - /sys:/sys:ro
+#      - /var/lib/docker/:/var/lib/docker:ro
+#      - /dev/disk/:/dev/disk:ro
+#      - /var/run/docker.sock:/var/run/docker.sock
+#      - /var/lib/dbus/machine-id:/var/lib/dbus/machine-id:ro
+#    depends_on:
+#      - clienta
+#      - clientb
+#      - server
+#    networks:
+#      - flwr_network
+#    command:
+#      - '--logtostderr=false'
+#      - '--v=0'
+
+networks:
+  flwr_network:
+    driver: bridge
+
+volumes:
+  grafana_data:
+    driver: local
