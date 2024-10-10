@@ -63,7 +63,7 @@ if os.path.exists(csv_file):
 
 with open(csv_file, 'w', newline='') as file:
     writer = csv.writer(file)
-    writer.writerow(['Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Time', 'CPU Usage (%)', 'Task'])
+    writer.writerow(['Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Time', 'CPU Usage (%)','Task'])
 
 
 def measure_communication_time(start_time, end_time):
@@ -303,11 +303,10 @@ class MultiModelStrategy(Strategy):
         parameters: Parameters,
         client_manager: ClientManager,
     ) -> List[Tuple[ClientProxy, FitIns]]:
-        min_clients = 6
+        min_clients = 2
 
         # Wait until there are enough clients
         while client_manager.num_available() < min_clients:
-            print("[Clients Registered. Sending Model Parameters to Clients...]")
             time.sleep(1)  
 
         # Sample available clients after reaching the minimum number
@@ -375,19 +374,19 @@ class MultiModelStrategy(Strategy):
                 print(f"[DEBUG] Aggregating parameters for taskB with {len(results_b)} results")
                 self.parameters_b = self.aggregate_parameters(results_b, "taskB")
             
-            # Combine aggregated metrics
+              # Combine aggregated metrics
             metrics_aggregated = {
                 "taskA": {
-                    "train_loss": global_metrics["taskA"]["train_loss"][-1],
-                    "train_accuracy": global_metrics["taskA"]["train_accuracy"][-1],
-                    "val_loss": global_metrics["taskA"]["val_loss"][-1],
-                    "val_accuracy": global_metrics["taskA"]["val_accuracy"][-1],
+                    "train_loss": global_metrics["taskA"]["train_loss"][-1] if global_metrics["taskA"]["train_loss"] else None,
+                    "train_accuracy": global_metrics["taskA"]["train_accuracy"][-1] if global_metrics["taskA"]["train_accuracy"] else None,
+                    "val_loss": global_metrics["taskA"]["val_loss"][-1] if global_metrics["taskA"]["val_loss"] else None,
+                    "val_accuracy": global_metrics["taskA"]["val_accuracy"][-1] if global_metrics["taskA"]["val_accuracy"] else None,
                 },
                 "taskB": {
-                    "train_loss": global_metrics["taskB"]["train_loss"],
-                    "train_accuracy": global_metrics["taskB"]["train_accuracy"],
-                    "val_loss": global_metrics["taskB"]["val_loss"],
-                    "val_accuracy": global_metrics["taskB"]["val_accuracy"],
+                    "train_loss": global_metrics["taskB"]["train_loss"][-1] if global_metrics["taskB"]["train_loss"] else None,
+                    "train_accuracy": global_metrics["taskB"]["train_accuracy"][-1] if global_metrics["taskB"]["train_accuracy"] else None,
+                    "val_loss": global_metrics["taskB"]["val_loss"][-1] if global_metrics["taskB"]["val_loss"] else None,
+                    "val_accuracy": global_metrics["taskB"]["val_accuracy"][-1] if global_metrics["taskB"]["val_accuracy"] else None,
                 },
             }
             
