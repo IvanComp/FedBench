@@ -33,17 +33,6 @@ client_registry = ClientRegistry()
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-# Create the directory for performance logs
-performance_dir = './performance/'
-if not os.path.exists(performance_dir):
-    os.makedirs(performance_dir)
-
-csv_file = os.path.join(performance_dir, '/FLwithAP_performance_metrics.csv')
-if not os.path.exists(csv_file):
-    with open(csv_file, 'w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow(['Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Time', 'CPU Usage (%)', 'Task'])
-
 class FlowerClient(NumPyClient):
     def __init__(self, cid: str, model_type):
         self.cid = cid 

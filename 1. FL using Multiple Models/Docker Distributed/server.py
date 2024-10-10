@@ -63,7 +63,8 @@ if os.path.exists(csv_file):
 
 with open(csv_file, 'w', newline='') as file:
     writer = csv.writer(file)
-    writer.writerow(['Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Time', 'CPU Usage (%)','Task'])
+    writer.writerow(['Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Time', 'CPU Usage (%)', 'Task',
+                     'Train Loss', 'Train Accuracy', 'Val Loss', 'Val Accuracy'])
 
 
 def measure_communication_time(start_time, end_time):
@@ -71,16 +72,32 @@ def measure_communication_time(start_time, end_time):
     print(f"Communication time: {communication_time:.2f} seconds")
     return communication_time
 
-
-def log_round_time(client_id, fl_round, training_time, communication_time, cpu_usage, model_type):
+def log_round_time(client_id, fl_round, training_time, communication_time, cpu_usage, model_type, already_logged):
     total_time = training_time + communication_time
+    
+    # Recupera i valori globali per il task corrente
+    train_loss = global_metrics[model_type]["train_loss"][-1] if global_metrics[model_type]["train_loss"] else 'N/A'
+    train_accuracy = global_metrics[model_type]["train_accuracy"][-1] if global_metrics[model_type]["train_accuracy"] else 'N/A'
+    val_loss = global_metrics[model_type]["val_loss"][-1] if global_metrics[model_type]["val_loss"] else 'N/A'
+    val_accuracy = global_metrics[model_type]["val_accuracy"][-1] if global_metrics[model_type]["val_accuracy"] else 'N/A'
+
+    # Controlliamo se già abbiamo registrato i valori per questo round e modello
+    if already_logged:
+        train_loss = ""
+        train_accuracy = ""
+        val_loss = ""
+        val_accuracy = ""
+
     print(
-        f"CLIENT {client_id} ({model_type}): Round {fl_round+1} completed with: Training Time {training_time:.2f} seconds, Communication Time {communication_time:.2f} seconds, Total Time {total_time:.2f} seconds, and average CPU usage of {cpu_usage:.2f}%"
+        f"CLIENT {client_id} ({model_type}): Round {fl_round+1} completed with: Training Time {training_time:.2f} seconds, "
+        f"Communication Time {communication_time:.2f} seconds, Total Time {total_time:.2f} seconds, CPU usage {cpu_usage:.2f}%"
     )
 
     with open(csv_file, 'a', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow([client_id, fl_round+1, training_time, communication_time, total_time, cpu_usage, model_type])
+        # Scrivi i valori per il client corrente
+        writer.writerow([client_id, fl_round+1, training_time, communication_time, total_time, cpu_usage, model_type,
+                         train_loss, train_accuracy, val_loss, val_accuracy])
 
     client_registry.update_client(client_id, True)
 
@@ -240,6 +257,8 @@ def weighted_average_global(metrics: List[Tuple[int, Metrics]], task_type: str) 
     global_metrics[task_type]["val_loss"].append(avg_val_loss)
     global_metrics[task_type]["val_accuracy"].append(avg_val_accuracy)
 
+    already_logged = False
+
     for num_examples, m in metrics:
         client_id = m.get("client_id")
         model_type = m.get("model_type")
@@ -252,7 +271,9 @@ def weighted_average_global(metrics: List[Tuple[int, Metrics]], task_type: str) 
                 client_registry.register_client(client_id, model_type)
 
             # Log including model_type
-            log_round_time(client_id, currentRnd, training_time, communication_time, cpu_usage, client_registry.get_client_model(client_id))
+            log_round_time(client_id, currentRnd, training_time, communication_time, cpu_usage, model_type, already_logged)
+
+            already_logged = True
 
     return {
         "train_loss": avg_train_loss,
@@ -303,7 +324,7 @@ class MultiModelStrategy(Strategy):
         parameters: Parameters,
         client_manager: ClientManager,
     ) -> List[Tuple[ClientProxy, FitIns]]:
-        min_clients = 2
+        min_clients = 4
 
         # Wait until there are enough clients
         while client_manager.num_available() < min_clients:
