@@ -45,6 +45,8 @@ class FlowerClient(NumPyClient):
 
     def fit(self, parameters, config):
         print(f"CLIENT {self.cid} Successfully Configured. Target Model: {self.model_type}", flush=True)
+
+        training_start_time = time.time()
         cpu_start = psutil.cpu_percent(interval=None)
 
         comm_start_time = time.time()
@@ -52,6 +54,8 @@ class FlowerClient(NumPyClient):
         results, training_time = train_A(self.net, self.trainloader, self.testloader, epochs=1, device=self.device)
         new_parameters = get_weights_A(self.net)
         comm_end_time = time.time()
+
+        training_end_time = time.time()
         cpu_end = psutil.cpu_percent(interval=None)
         cpu_usage = (cpu_start + cpu_end) / 2
 
@@ -69,6 +73,8 @@ class FlowerClient(NumPyClient):
             "cpu_usage": cpu_usage,
             "client_id": self.cid,
             "model_type": self.model_type,
+            "training_start_time": training_start_time,
+            "training_end_time": training_end_time,
         }
 
         return new_parameters, len(self.trainloader.dataset), metrics

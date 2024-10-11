@@ -64,15 +64,14 @@ if os.path.exists(csv_file):
 with open(csv_file, 'w', newline='') as file:
     writer = csv.writer(file)
     writer.writerow(['Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Time', 'CPU Usage (%)', 'Task',
-                     'Train Loss', 'Train Accuracy', 'Val Loss', 'Val Accuracy'])
-
+                     'Train Loss', 'Train Accuracy', 'Val Loss', 'Val Accuracy', 'SRT1', 'SRT2'])
 
 def measure_communication_time(start_time, end_time):
     communication_time = end_time - start_time
     print(f"Communication time: {communication_time:.2f} seconds")
     return communication_time
 
-def log_round_time(client_id, fl_round, training_time, communication_time, cpu_usage, model_type, already_logged):
+def log_round_time(client_id, fl_round, training_time, communication_time, cpu_usage, model_type, already_logged, srt1, srt2):
     total_time = training_time + communication_time
     
     # Recupera i valori globali per il task corrente
@@ -87,6 +86,8 @@ def log_round_time(client_id, fl_round, training_time, communication_time, cpu_u
         train_accuracy = ""
         val_loss = ""
         val_accuracy = ""
+        srt1 = ""
+        srt2 = ""
 
     print(
         f"CLIENT {client_id} ({model_type}): Round {fl_round+1} completed with: Training Time {training_time:.2f} seconds, "
@@ -97,7 +98,7 @@ def log_round_time(client_id, fl_round, training_time, communication_time, cpu_u
         writer = csv.writer(file)
         # Scrivi i valori per il client corrente
         writer.writerow([client_id, fl_round+1, training_time, communication_time, total_time, cpu_usage, model_type,
-                         train_loss, train_accuracy, val_loss, val_accuracy])
+                         train_loss, train_accuracy, val_loss, val_accuracy, srt1, srt2])
 
     client_registry.update_client(client_id, True)
 
@@ -271,7 +272,7 @@ def weighted_average_global(metrics: List[Tuple[int, Metrics]], task_type: str) 
                 client_registry.register_client(client_id, model_type)
 
             # Log including model_type
-            log_round_time(client_id, currentRnd, training_time, communication_time, cpu_usage, model_type, already_logged)
+            log_round_time(client_id, currentRnd, training_time, communication_time, cpu_usage, model_type, already_logged, srt1, srt2)
 
             already_logged = True
 
@@ -365,14 +366,32 @@ class MultiModelStrategy(Strategy):
             results: List[Tuple[ClientProxy, FitRes]],
             failures: List[BaseException],
         ) -> Optional[Tuple[Parameters, Dict[str, Scalar]]]:
-            # Separate results per model type
+
             results_a = []
             results_b = []
+            training_start_time = None
+            training_end_time = None
+            global aggregation_end_time
 
             for client_proxy, fit_res in results:
-                # Use client_id from metrics
-                client_id = fit_res.metrics.get("client_id")  # This should be the 4-character cid
+               
+                client_id = fit_res.metrics.get("client_id")
                 model_type = fit_res.metrics.get("model_type")
+                client_training_start_time = fit_res.metrics.get("training_start_time")
+                client_training_end_time = fit_res.metrics.get("training_end_time")
+
+                if training_start_time is None or client_training_start_time < training_start_time:
+                    training_start_time = client_training_start_time
+
+                if training_end_time is None or client_training_end_time > training_end_time:
+                    training_end_time = client_training_end_time
+
+                aggregation_end_time = time.time()
+
+                srt1 = training_end_time - training_start_time if training_start_time and training_end_time else 'N/A'
+
+                srt2 = aggregation_end_time - training_start_time if training_start_time and aggregation_end_time else 'N/A'
+
                 client_model_mapping[client_id] = model_type  # Update the model_type mapping
                 print(f"[DEBUG] Results received from client {client_id}, Model Type: {model_type}")
 
@@ -424,7 +443,7 @@ class MultiModelStrategy(Strategy):
                 generate_training_time_graph()  
                 generate_communication_time_graph()
                 
-            return (self.parameters_a, self.parameters_b), metrics_aggregated
+            return (self.parameters_a, self.parameters_b), metrics_aggregated, {"SRT1": srt1, "SRT2": srt2}
 
     def aggregate_parameters(self, results, task_type):
         # Aggregate weights using weighted average based on number of examples
