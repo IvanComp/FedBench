@@ -74,13 +74,11 @@ def measure_communication_time(start_time, end_time):
 def log_round_time(client_id, fl_round, training_time, communication_time, cpu_usage, model_type, already_logged, srt1, srt2):
     total_time = training_time + communication_time
     
-    # Recupera i valori globali per il task corrente
-    train_loss = global_metrics[model_type]["train_loss"][-1] if global_metrics[model_type]["train_loss"] else 'N/A'
-    train_accuracy = global_metrics[model_type]["train_accuracy"][-1] if global_metrics[model_type]["train_accuracy"] else 'N/A'
-    val_loss = global_metrics[model_type]["val_loss"][-1] if global_metrics[model_type]["val_loss"] else 'N/A'
-    val_accuracy = global_metrics[model_type]["val_accuracy"][-1] if global_metrics[model_type]["val_accuracy"] else 'N/A'
+    train_loss = round(global_metrics[model_type]["train_loss"][-1]) if global_metrics[model_type]["train_loss"] else 'N/A'
+    train_accuracy = round(global_metrics[model_type]["train_accuracy"][-1], 2) if global_metrics[model_type]["train_accuracy"] else 'N/A'
+    val_loss = round(global_metrics[model_type]["val_loss"][-1]) if global_metrics[model_type]["val_loss"] else 'N/A'
+    val_accuracy = round(global_metrics[model_type]["val_accuracy"][-1], 2) if global_metrics[model_type]["val_accuracy"] else 'N/A'
 
-    # Controlliamo se già abbiamo registrato i valori per questo round e modello
     if already_logged:
         train_loss = ""
         train_accuracy = ""
@@ -89,16 +87,19 @@ def log_round_time(client_id, fl_round, training_time, communication_time, cpu_u
         srt1 = ""
         srt2 = ""
 
+    srt1_rounded = round(srt1) if isinstance(srt1, (int, float)) else srt1
+    srt2_rounded = round(srt2) if isinstance(srt2, (int, float)) else srt2
+
     print(
-        f"CLIENT {client_id} ({model_type}): Round {fl_round+1} completed with: Training Time {training_time:.2f} seconds, "
-        f"Communication Time {communication_time:.2f} seconds, Total Time {total_time:.2f} seconds, CPU usage {cpu_usage:.2f}%"
+        f"CLIENT {client_id} ({model_type}): Round {fl_round+1} completed with: Training Time {round(training_time)} seconds, "
+        f"Communication Time {round(communication_time)} seconds, Total Time {round(total_time)} seconds, CPU usage {round(cpu_usage)}%"
     )
 
     with open(csv_file, 'a', newline='') as file:
         writer = csv.writer(file)
-        # Scrivi i valori per il client corrente
-        writer.writerow([client_id, fl_round+1, training_time, communication_time, total_time, cpu_usage, model_type,
-                         train_loss, train_accuracy, val_loss, val_accuracy, srt1, srt2])
+
+        writer.writerow([client_id, fl_round+1, round(training_time), round(communication_time), round(total_time), round(cpu_usage), model_type,
+                         train_loss, train_accuracy, val_loss, val_accuracy, srt1_rounded, srt2_rounded])
 
     client_registry.update_client(client_id, True)
 
@@ -233,7 +234,7 @@ def generate_communication_time_graph():
     plt.close()
 
 
-def weighted_average_global(metrics: List[Tuple[int, Metrics]], task_type: str) -> Metrics:
+def weighted_average_global(metrics: List[Tuple[int, Metrics]], task_type: str, srt1, srt2) -> Metrics:
     examples = [num_examples for num_examples, _ in metrics]
     total_examples = sum(examples)
     if total_examples == 0:
@@ -271,7 +272,7 @@ def weighted_average_global(metrics: List[Tuple[int, Metrics]], task_type: str) 
             if not client_registry.is_registered(client_id):
                 client_registry.register_client(client_id, model_type)
 
-            # Log including model_type
+            # Log including model_type, srt1, and srt2
             log_round_time(client_id, currentRnd, training_time, communication_time, cpu_usage, model_type, already_logged, srt1, srt2)
 
             already_logged = True
@@ -367,85 +368,91 @@ class MultiModelStrategy(Strategy):
             failures: List[BaseException],
         ) -> Optional[Tuple[Parameters, Dict[str, Scalar]]]:
 
-            results_a = []
-            results_b = []
-            training_start_time = None
-            training_end_time = None
-            global aggregation_end_time
+        results_a = []
+        results_b = []
+        training_start_time = None
+        training_end_time = None
 
-            for client_proxy, fit_res in results:
-               
-                client_id = fit_res.metrics.get("client_id")
-                model_type = fit_res.metrics.get("model_type")
-                client_training_start_time = fit_res.metrics.get("training_start_time")
-                client_training_end_time = fit_res.metrics.get("training_end_time")
+        # Inizializziamo srt1 e srt2 a 'N/A' per garantire che abbiano sempre un valore
+        srt1 = 'N/A'
+        srt2 = 'N/A'
+        
+        global aggregation_end_time
 
-                if training_start_time is None or client_training_start_time < training_start_time:
-                    training_start_time = client_training_start_time
+        for client_proxy, fit_res in results:
+            client_id = fit_res.metrics.get("client_id")
+            model_type = fit_res.metrics.get("model_type")
+            client_training_start_time = fit_res.metrics.get("training_start_time")
+            client_training_end_time = fit_res.metrics.get("training_end_time")
 
-                if training_end_time is None or client_training_end_time > training_end_time:
-                    training_end_time = client_training_end_time
+            if training_start_time is None or client_training_start_time < training_start_time:
+                training_start_time = client_training_start_time
 
-                aggregation_end_time = time.time()
+            if training_end_time is None or client_training_end_time > training_end_time:
+                training_end_time = client_training_end_time
 
-                srt1 = training_end_time - training_start_time if training_start_time and training_end_time else 'N/A'
+            # Calcoliamo srt1 solo se entrambi i tempi sono disponibili
+            if training_start_time and training_end_time:
+                srt1 = round(training_end_time - training_start_time)
 
-                srt2 = aggregation_end_time - training_start_time if training_start_time and aggregation_end_time else 'N/A'
+            client_model_mapping[client_id] = model_type
+            print(f"[DEBUG] Results received from client {client_id}, Model Type: {model_type}")
 
-                client_model_mapping[client_id] = model_type  # Update the model_type mapping
-                print(f"[DEBUG] Results received from client {client_id}, Model Type: {model_type}")
+            if model_type == "taskA":
+                results_a.append((fit_res.parameters, fit_res.num_examples, fit_res.metrics))
+            elif model_type == "taskB":
+                results_b.append((fit_res.parameters, fit_res.num_examples, fit_res.metrics))
+            else:
+                print(f"[DEBUG] Unknown Model Type for client {client_id}")
+                continue
 
-                if model_type == "taskA":
-                    results_a.append((fit_res.parameters, fit_res.num_examples, fit_res.metrics))
-                elif model_type == "taskB":
-                    results_b.append((fit_res.parameters, fit_res.num_examples, fit_res.metrics))
-                else:
-                    # Handle unknown model_type if necessary
-                    print(f"[DEBUG] Unknown Model Type for client {client_id}")
-                    continue
-            
-            # Aggregate parameters for taskA
-            if results_a:
-                print(f"[DEBUG] Aggregating parameters for taskA with {len(results_a)} results")
-                self.parameters_a = self.aggregate_parameters(results_a, "taskA")
-            
-            # Aggregate parameters for taskB
-            if results_b:
-                print(f"[DEBUG] Aggregating parameters for taskB with {len(results_b)} results")
-                self.parameters_b = self.aggregate_parameters(results_b, "taskB")
-            
-              # Combine aggregated metrics
-            metrics_aggregated = {
-                "taskA": {
-                    "train_loss": global_metrics["taskA"]["train_loss"][-1] if global_metrics["taskA"]["train_loss"] else None,
-                    "train_accuracy": global_metrics["taskA"]["train_accuracy"][-1] if global_metrics["taskA"]["train_accuracy"] else None,
-                    "val_loss": global_metrics["taskA"]["val_loss"][-1] if global_metrics["taskA"]["val_loss"] else None,
-                    "val_accuracy": global_metrics["taskA"]["val_accuracy"][-1] if global_metrics["taskA"]["val_accuracy"] else None,
-                },
-                "taskB": {
-                    "train_loss": global_metrics["taskB"]["train_loss"][-1] if global_metrics["taskB"]["train_loss"] else None,
-                    "train_accuracy": global_metrics["taskB"]["train_accuracy"][-1] if global_metrics["taskB"]["train_accuracy"] else None,
-                    "val_loss": global_metrics["taskB"]["val_loss"][-1] if global_metrics["taskB"]["val_loss"] else None,
-                    "val_accuracy": global_metrics["taskB"]["val_accuracy"][-1] if global_metrics["taskB"]["val_accuracy"] else None,
-                },
-            }
-            
-            print_results()
-            
-            global currentRnd
-            currentRnd += 1
+        # Aggrega i parametri per taskA
+        if results_a:
+            print(f"[DEBUG] Aggregating parameters for taskA with {len(results_a)} results")
+            self.parameters_a = self.aggregate_parameters(results_a, "taskA", srt1, srt2)
 
-            if currentRnd == num_rounds:
-                print("Starting graph generation...")
-                generate_performance_graphs()               
-                generate_cpu_usage_graph()         
-                generate_total_time_graph() 
-                generate_training_time_graph()  
-                generate_communication_time_graph()
-                
-            return (self.parameters_a, self.parameters_b), metrics_aggregated, {"SRT1": srt1, "SRT2": srt2}
+        # Aggrega i parametri per taskB
+        if results_b:
+            print(f"[DEBUG] Aggregating parameters for taskB with {len(results_b)} results")
+            self.parameters_b = self.aggregate_parameters(results_b, "taskB", srt1, srt2)
 
-    def aggregate_parameters(self, results, task_type):
+        # Combiniamo le metriche aggregate
+        metrics_aggregated = {
+            "taskA": {
+                "train_loss": global_metrics["taskA"]["train_loss"][-1] if global_metrics["taskA"]["train_loss"] else None,
+                "train_accuracy": global_metrics["taskA"]["train_accuracy"][-1] if global_metrics["taskA"]["train_accuracy"] else None,
+                "val_loss": global_metrics["taskA"]["val_loss"][-1] if global_metrics["taskA"]["val_loss"] else None,
+                "val_accuracy": global_metrics["taskA"]["val_accuracy"][-1] if global_metrics["taskA"]["val_accuracy"] else None,
+            },
+            "taskB": {
+                "train_loss": global_metrics["taskB"]["train_loss"][-1] if global_metrics["taskB"]["train_loss"] else None,
+                "train_accuracy": global_metrics["taskB"]["train_accuracy"][-1] if global_metrics["taskB"]["train_accuracy"] else None,
+                "val_loss": global_metrics["taskB"]["val_loss"][-1] if global_metrics["taskB"]["val_loss"] else None,
+                "val_accuracy": global_metrics["taskB"]["val_accuracy"][-1] if global_metrics["taskB"]["val_accuracy"] else None,
+            },
+        }
+
+        print_results()
+
+        # Calcoliamo srt2 dopo aver completato l'aggregazione
+        aggregation_end_time = time.time()
+        if training_start_time:
+            srt2 = round(aggregation_end_time - training_start_time)
+
+        global currentRnd
+        currentRnd += 1
+
+        if currentRnd == num_rounds:
+            print("Starting graph generation...")
+            generate_performance_graphs()
+            generate_cpu_usage_graph()
+            generate_total_time_graph()
+            generate_training_time_graph()
+            generate_communication_time_graph()
+
+        return (self.parameters_a, self.parameters_b), metrics_aggregated
+
+    def aggregate_parameters(self, results, task_type, srt1, srt2):
         # Aggregate weights using weighted average based on number of examples
         total_examples = sum([num_examples for _, num_examples, _ in results])
         new_weights = None
@@ -462,7 +469,7 @@ class MultiModelStrategy(Strategy):
             metrics.append((num_examples, client_metrics))
 
         # Aggregate metrics
-        weighted_average_global(metrics, task_type)
+        weighted_average_global(metrics, task_type, srt1, srt2)
 
         return ndarrays_to_parameters(new_weights)
 

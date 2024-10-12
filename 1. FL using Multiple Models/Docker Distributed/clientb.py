@@ -51,7 +51,7 @@ class FlowerClient(NumPyClient):
 
         comm_start_time = time.time()
         set_weights_B(self.net, parameters)
-        results, training_time = train_B(self.net, self.trainloader, self.testloader, epochs=1, device=self.device)
+        results, training_time = train_B(self.net, self.trainloader, self.testloader, epochs=5, device=self.device)
         new_parameters = get_weights_B(self.net)
         comm_end_time = time.time()
 
