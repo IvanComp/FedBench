@@ -46,7 +46,7 @@ In the target with 'docker-compose' file, enter the following command:
 docker compose build
 
 #Launch Docker images (Server, 3 Client A, 3 Client B, Prometheus, Grafana)
-docker compose up --scale clienta=3 --scale clientb=3
+NUM_ROUNDS=2 docker-compose up --scale clienta=2 --scale clientb=0
 ```
 
 ## To run the Simulation Locally:

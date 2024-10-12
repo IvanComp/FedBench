@@ -44,14 +44,9 @@ global_metrics = {
 matplotlib.use('Agg')
 current_dir = os.path.abspath(os.path.dirname(__file__))
 
-# Define a gauge to track the global model accuracy
-accuracy_gauge = Gauge("model_accuracy", "Current accuracy of the global model")
-
-# Define a gauge to track the global model loss
-loss_gauge = Gauge("model_loss", "Current loss of the global model")
-
+num_rounds = int(os.getenv("NUM_ROUNDS", 2))
 currentRnd = 0
-num_rounds = 2
+
 
 performance_dir = './performance/'
 if not os.path.exists(performance_dir):
@@ -71,7 +66,7 @@ def measure_communication_time(start_time, end_time):
     print(f"Communication time: {communication_time:.2f} seconds")
     return communication_time
 
-def log_round_time(client_id, fl_round, training_time, communication_time, cpu_usage, model_type, already_logged, srt1, srt2):
+def log_round_time(client_id, fl_round, training_time, communication_time, total_time, cpu_usage, model_type, already_logged, srt1, srt2):
     total_time = training_time + communication_time
     
     train_loss = round(global_metrics[model_type]["train_loss"][-1]) if global_metrics[model_type]["train_loss"] else 'N/A'
@@ -234,7 +229,7 @@ def generate_communication_time_graph():
     plt.close()
 
 
-def weighted_average_global(metrics: List[Tuple[int, Metrics]], task_type: str, srt1, srt2) -> Metrics:
+def weighted_average_global(metrics: List[Tuple[int, Metrics]], task_type: str, srt1, srt2, communication_time) -> Metrics:
     examples = [num_examples for num_examples, _ in metrics]
     total_examples = sum(examples)
     if total_examples == 0:
@@ -265,15 +260,15 @@ def weighted_average_global(metrics: List[Tuple[int, Metrics]], task_type: str, 
         client_id = m.get("client_id")
         model_type = m.get("model_type")
         training_time = m.get("training_time")
-        communication_time = m.get("communication_time")
         cpu_usage = m.get("cpu_usage")
        
         if client_id:
             if not client_registry.is_registered(client_id):
                 client_registry.register_client(client_id, model_type)
 
+            total_time = training_time + communication_time
             # Log including model_type, srt1, and srt2
-            log_round_time(client_id, currentRnd, training_time, communication_time, cpu_usage, model_type, already_logged, srt1, srt2)
+            log_round_time(client_id, currentRnd, training_time, communication_time, total_time, cpu_usage, model_type, already_logged, srt1, srt2)
 
             already_logged = True
 
@@ -326,7 +321,7 @@ class MultiModelStrategy(Strategy):
         parameters: Parameters,
         client_manager: ClientManager,
     ) -> List[Tuple[ClientProxy, FitIns]]:
-        min_clients = 4
+        min_clients = 2
 
         # Wait until there are enough clients
         while client_manager.num_available() < min_clients:
@@ -384,6 +379,8 @@ class MultiModelStrategy(Strategy):
             model_type = fit_res.metrics.get("model_type")
             client_training_start_time = fit_res.metrics.get("training_start_time")
             client_training_end_time = fit_res.metrics.get("training_end_time")
+            communication_start_time = fit_res.metrics.get("communication_start_time")
+            communication_time = time.time() - communication_start_time
 
             if training_start_time is None or client_training_start_time < training_start_time:
                 training_start_time = client_training_start_time
@@ -409,12 +406,12 @@ class MultiModelStrategy(Strategy):
         # Aggrega i parametri per taskA
         if results_a:
             print(f"[DEBUG] Aggregating parameters for taskA with {len(results_a)} results")
-            self.parameters_a = self.aggregate_parameters(results_a, "taskA", srt1, srt2)
+            self.parameters_a = self.aggregate_parameters(results_a, "taskA", srt1, srt2, communication_time)
 
         # Aggrega i parametri per taskB
         if results_b:
             print(f"[DEBUG] Aggregating parameters for taskB with {len(results_b)} results")
-            self.parameters_b = self.aggregate_parameters(results_b, "taskB", srt1, srt2)
+            self.parameters_b = self.aggregate_parameters(results_b, "taskB", srt1, srt2, communication_time)
 
         # Combiniamo le metriche aggregate
         metrics_aggregated = {
@@ -452,7 +449,7 @@ class MultiModelStrategy(Strategy):
 
         return (self.parameters_a, self.parameters_b), metrics_aggregated
 
-    def aggregate_parameters(self, results, task_type, srt1, srt2):
+    def aggregate_parameters(self, results, task_type, srt1, srt2,communication_time):
         # Aggregate weights using weighted average based on number of examples
         total_examples = sum([num_examples for _, num_examples, _ in results])
         new_weights = None
@@ -469,7 +466,7 @@ class MultiModelStrategy(Strategy):
             metrics.append((num_examples, client_metrics))
 
         # Aggregate metrics
-        weighted_average_global(metrics, task_type, srt1, srt2)
+        weighted_average_global(metrics, task_type, srt1, srt2, communication_time)
 
         return ndarrays_to_parameters(new_weights)
 

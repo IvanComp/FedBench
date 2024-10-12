@@ -45,22 +45,23 @@ class FlowerClient(NumPyClient):
 
     def fit(self, parameters, config):
         print(f"CLIENT {self.cid} Successfully Configured. Target Model: {self.model_type}", flush=True)
-
-        training_start_time = time.time()  
         cpu_start = psutil.cpu_percent(interval=None)
 
-        comm_start_time = time.time()
+        # Start training and record time
+        training_start_time = time.time()
         set_weights_B(self.net, parameters)
-        results, training_time = train_B(self.net, self.trainloader, self.testloader, epochs=5, device=self.device)
-        new_parameters = get_weights_B(self.net)
-        comm_end_time = time.time()
+        results, training_time = train_B(self.net, self.trainloader, self.testloader, epochs=1, device=self.device)
+        training_end_time = time.time()
+        
+        training_time = training_end_time - training_start_time
 
-        training_end_time = time.time()  
+        # Capture CPU usage
         cpu_end = psutil.cpu_percent(interval=None)
         cpu_usage = (cpu_start + cpu_end) / 2
 
-        communication_time = comm_end_time - comm_start_time
-        total_time = training_time + communication_time
+        communication_start_time = time.time()
+        # Prepare the updated model weights and the metrics
+        new_parameters = get_weights_B(self.net)
 
         metrics = {
             "train_loss": results["train_loss"],
@@ -68,13 +69,10 @@ class FlowerClient(NumPyClient):
             "val_loss": results["val_loss"],
             "val_accuracy": results["val_accuracy"],
             "training_time": training_time,
-            "communication_time": communication_time,
-            "total_time": total_time,
             "cpu_usage": cpu_usage,
             "client_id": self.cid,
             "model_type": self.model_type,
-            "training_start_time": training_start_time, 
-            "training_end_time": training_end_time,  
+            "communication_start_time": communication_start_time,
         }
 
         return new_parameters, len(self.trainloader.dataset), metrics
