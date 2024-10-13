@@ -80,8 +80,6 @@ def log_round_time(client_id, fl_round, training_time, communication_time, total
     srt1_rounded = round(srt1) if isinstance(srt1, (int, float)) else srt1
     srt2_rounded = round(srt2) if isinstance(srt2, (int, float)) else srt2
 
-    #print(f"CLIENT {client_id} ({model_type}): Round {fl_round+1} completed with: Training Time {training_time} seconds")
-
     with open(csv_file, 'a', newline='') as file:
         writer = csv.writer(file)
         writer.writerow([client_id, fl_round+1, round(training_time), round(communication_time, 2), round(total_time), round(cpu_usage), model_type,
@@ -257,9 +255,9 @@ def weighted_average_global(metrics: List[Tuple[int, Metrics]], task_type: str, 
                 client_registry.register_client(client_id, model_type)
 
             total_time = training_time + time_between_rounds
-            communication_time = time.time() - communication_start_time
             srt2 = time_between_rounds
-            log_round_time(client_id, currentRnd, training_time, communication_time, total_time, cpu_usage, model_type, already_logged, srt1, srt2)
+            communication_time = srt2 - training_time
+            log_round_time(client_id, currentRnd, training_time, round(communication_time, 2), total_time, cpu_usage, model_type, already_logged, srt1, srt2)
 
             already_logged = True
 
