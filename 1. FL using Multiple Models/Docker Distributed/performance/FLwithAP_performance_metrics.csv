@@ -1,5 +1,5 @@
 Client ID,FL Round,Training Time,Communication Time,Total Time,CPU Usage (%),Task,Train Loss,Train Accuracy,Val Loss,Val Accuracy,SRT1,SRT2
-client 1,1,63,0,63,51,taskA,3403.0,0.22,21762.0,0.23,,
-client 2,1,64,0,64,51,taskA,,,,,,
-client 2,2,62,1,63,94,taskA,3232.0,0.24,20669.0,0.25,,
-client 1,2,61,1,62,75,taskA,,,,,,
+client 1,1,29,2,31,53,taskA,3286.0,0.23,20978.0,0.24,29.0,2.0
+client 2,1,28,2,30,54,taskA,,,,,,
+client 2,2,32,0,32,71,taskA,2936.0,0.31,18721.0,0.31,36.0,2.0
+client 1,2,36,0,36,84,taskA,,,,,,

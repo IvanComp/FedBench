@@ -61,11 +61,6 @@ with open(csv_file, 'w', newline='') as file:
     writer.writerow(['Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Time', 'CPU Usage (%)', 'Task',
                      'Train Loss', 'Train Accuracy', 'Val Loss', 'Val Accuracy', 'SRT1', 'SRT2'])
 
-def measure_communication_time(start_time, end_time):
-    communication_time = end_time - start_time
-    print(f"Communication time: {communication_time:.2f} seconds")
-    return communication_time
-
 def log_round_time(client_id, fl_round, training_time, communication_time, total_time, cpu_usage, model_type, already_logged, srt1, srt2):
     total_time = training_time + communication_time
     
@@ -87,12 +82,10 @@ def log_round_time(client_id, fl_round, training_time, communication_time, total
 
     print(
         f"CLIENT {client_id} ({model_type}): Round {fl_round+1} completed with: Training Time {round(training_time)} seconds, "
-        f"Communication Time {round(communication_time)} seconds, Total Time {round(total_time)} seconds, CPU usage {round(cpu_usage)}%"
     )
 
     with open(csv_file, 'a', newline='') as file:
         writer = csv.writer(file)
-
         writer.writerow([client_id, fl_round+1, round(training_time), round(communication_time), round(total_time), round(cpu_usage), model_type,
                          train_loss, train_accuracy, val_loss, val_accuracy, srt1_rounded, srt2_rounded])
 
@@ -103,7 +96,6 @@ def generate_performance_graphs():
     sns.set_theme(style="ticks")
 
     df = pd.read_csv(csv_file)
-    print(df.head())  # Debugging: check CSV content
 
     unique_clients = df['Client ID'].unique()
     client_mapping = {original_id: f"client {i + 1}" for i, original_id in enumerate(unique_clients)}
@@ -125,7 +117,7 @@ def generate_performance_graphs():
     plt.tight_layout()
 
     graph_path = os.path.join(performance_dir, 'performance_metrics.pdf')
-    print(f"Saving the graph to: {graph_path}")  # Debugging: check save path
+    print(f"Saving the graph to: {graph_path}")  
     plt.savefig(graph_path, format="pdf")
     
     # Check if the file was created
@@ -357,60 +349,55 @@ class MultiModelStrategy(Strategy):
         return fit_configurations
 
     def aggregate_fit(
-            self,
-            server_round: int,
-            results: List[Tuple[ClientProxy, FitRes]],
-            failures: List[BaseException],
-        ) -> Optional[Tuple[Parameters, Dict[str, Scalar]]]:
+        self,
+        server_round: int,
+        results: List[Tuple[ClientProxy, FitRes]],
+        failures: List[BaseException],
+    ) -> Optional[Tuple[Parameters, Dict[str, Scalar]]]:
 
         results_a = []
         results_b = []
-        training_start_time = None
-        training_end_time = None
+        training_times = []
 
-        # Inizializziamo srt1 e srt2 a 'N/A' per garantire che abbiano sempre un valore
         srt1 = 'N/A'
         srt2 = 'N/A'
         
-        global aggregation_end_time
-
         for client_proxy, fit_res in results:
             client_id = fit_res.metrics.get("client_id")
             model_type = fit_res.metrics.get("model_type")
-            client_training_start_time = fit_res.metrics.get("training_start_time")
-            client_training_end_time = fit_res.metrics.get("training_end_time")
+            training_time = fit_res.metrics.get("training_time")
             communication_start_time = fit_res.metrics.get("communication_start_time")
-            communication_time = time.time() - communication_start_time
-
-            if training_start_time is None or client_training_start_time < training_start_time:
-                training_start_time = client_training_start_time
-
-            if training_end_time is None or client_training_end_time > training_end_time:
-                training_end_time = client_training_end_time
-
-            # Calcoliamo srt1 solo se entrambi i tempi sono disponibili
-            if training_start_time and training_end_time:
-                srt1 = round(training_end_time - training_start_time)
 
             client_model_mapping[client_id] = model_type
-            print(f"[DEBUG] Results received from client {client_id}, Model Type: {model_type}")
+
+            if training_time is not None:
+                training_times.append(training_time)              
 
             if model_type == "taskA":
                 results_a.append((fit_res.parameters, fit_res.num_examples, fit_res.metrics))
             elif model_type == "taskB":
                 results_b.append((fit_res.parameters, fit_res.num_examples, fit_res.metrics))
             else:
-                print(f"[DEBUG] Unknown Model Type for client {client_id}")
+                print(f"Unknown Model Type for client {client_id}")
                 continue
+
 
         # Aggrega i parametri per taskA
         if results_a:
-            print(f"[DEBUG] Aggregating parameters for taskA with {len(results_a)} results")
+            print(f"Aggregating parameters for taskA with {len(results_a)} results")
+            srt1 = max(training_times)
+            srt2 = "2"
+            communication_time = time.time() - communication_start_time
+            print(f"Communication time for client {client_id}: {communication_time}")
             self.parameters_a = self.aggregate_parameters(results_a, "taskA", srt1, srt2, communication_time)
 
         # Aggrega i parametri per taskB
         if results_b:
-            print(f"[DEBUG] Aggregating parameters for taskB with {len(results_b)} results")
+            print(f"Aggregating parameters for taskB with {len(results_b)} results")
+            communication_time = time.time() - communication_start_time
+            srt1 = max(training_times)
+            srt2 = "2"
+            print(f"Communication time for client {client_id}: {communication_time}")
             self.parameters_b = self.aggregate_parameters(results_b, "taskB", srt1, srt2, communication_time)
 
         # Combiniamo le metriche aggregate
@@ -430,11 +417,6 @@ class MultiModelStrategy(Strategy):
         }
 
         print_results()
-
-        # Calcoliamo srt2 dopo aver completato l'aggregazione
-        aggregation_end_time = time.time()
-        if training_start_time:
-            srt2 = round(aggregation_end_time - training_start_time)
 
         global currentRnd
         currentRnd += 1
@@ -458,7 +440,7 @@ class MultiModelStrategy(Strategy):
         for client_params, num_examples, client_metrics in results:
             client_weights = parameters_to_ndarrays(client_params)
             weight = num_examples / total_examples
-            print(f"[DEBUG] Aggregating parameters for {task_type}, num_examples: {num_examples}, weight: {weight}")
+            print(f"Aggregating parameters for {task_type}, num_examples: {num_examples}, weight: {weight}")
             if new_weights is None:
                 new_weights = [w * weight for w in client_weights]
             else:

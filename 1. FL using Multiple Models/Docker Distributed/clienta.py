@@ -47,21 +47,14 @@ class FlowerClient(NumPyClient):
         print(f"CLIENT {self.cid} Successfully Configured. Target Model: {self.model_type}", flush=True)
         cpu_start = psutil.cpu_percent(interval=None)
         
-        # Start training and record time
-        training_start_time = time.time()
         set_weights_A(self.net, parameters)
-        results, training_time = train_A(self.net, self.trainloader, self.testloader, epochs=1, device=self.device)
-        training_end_time = time.time()
+        results, training_time = train_A(self.net, self.trainloader, self.testloader, epochs=1, device=self.device)       
+        communication_start_time = time.time()
 
-        training_time = training_end_time - training_start_time
-        
-        # Capture CPU usage
+        new_parameters = get_weights_A(self.net)
+
         cpu_end = psutil.cpu_percent(interval=None)
         cpu_usage = (cpu_start + cpu_end) / 2
-
-        communication_start_time = time.time()
-        # Prepare the updated model weights and the metrics
-        new_parameters = get_weights_A(self.net)
 
         metrics = {
             "train_loss": results["train_loss"],
@@ -74,7 +67,7 @@ class FlowerClient(NumPyClient):
             "model_type": self.model_type,
             "communication_start_time": communication_start_time,
         }
-
+        
         return new_parameters, len(self.trainloader.dataset), metrics
 
     def evaluate(self, parameters, config):
