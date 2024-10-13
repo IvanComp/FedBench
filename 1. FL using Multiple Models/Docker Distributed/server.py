@@ -58,8 +58,8 @@ if os.path.exists(csv_file):
 
 with open(csv_file, 'w', newline='') as file:
     writer = csv.writer(file)
-    writer.writerow(['Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Time', 'CPU Usage (%)', 'Task',
-                     'Train Loss', 'Train Accuracy', 'Val Loss', 'Val Accuracy', 'SRT1', 'SRT2'])
+    writer.writerow(['Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Client Time', 'CPU Usage (%)', 'Task',
+                     'Train Loss', 'Train Accuracy', 'Val Loss', 'Val Accuracy', 'Total Time of Training Round', 'Total Time of FL Round'])
 
 def log_round_time(client_id, fl_round, training_time, communication_time, total_time, cpu_usage, model_type, already_logged, srt1, srt2):
     total_time = training_time + communication_time
@@ -80,15 +80,12 @@ def log_round_time(client_id, fl_round, training_time, communication_time, total
     srt1_rounded = round(srt1) if isinstance(srt1, (int, float)) else srt1
     srt2_rounded = round(srt2) if isinstance(srt2, (int, float)) else srt2
 
-    print(
-        f"CLIENT {client_id} ({model_type}): Round {fl_round+1} completed with: Training Time {round(training_time)} seconds, "
-    )
+    #print(f"CLIENT {client_id} ({model_type}): Round {fl_round+1} completed with: Training Time {training_time} seconds")
 
     with open(csv_file, 'a', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow([client_id, fl_round+1, round(training_time), round(communication_time), round(total_time), round(cpu_usage), model_type,
+        writer.writerow([client_id, fl_round+1, round(training_time), round(communication_time, 2), round(total_time), round(cpu_usage), model_type,
                          train_loss, train_accuracy, val_loss, val_accuracy, srt1_rounded, srt2_rounded])
-
     client_registry.update_client(client_id, True)
 
 # Function to generate performance graphs
@@ -104,11 +101,11 @@ def generate_performance_graphs():
     num_clients = len(unique_clients)
     df = df.reset_index(drop=True)
     df['FL Round'] = (df.index // num_clients) + 1
-    df[['Training Time', 'Communication Time', 'Total Time']] = df[['Training Time', 'Communication Time', 'Total Time']].round(2)
+    df[['Training Time', 'Communication Time', 'Total Client Time']] = df[['Training Time', 'Communication Time', 'Total Client Time']].round(2)
     df.to_csv(csv_file, index=False)
 
     plt.figure(figsize=(12, 6))
-    df_melted = df.melt(id_vars=["Client ID"], value_vars=["Training Time", "Communication Time", "Total Time"],
+    df_melted = df.melt(id_vars=["Client ID"], value_vars=["Training Time", "Communication Time", "Total Client Time"],
                         var_name="Metric", value_name="Time (seconds)")
     sns.barplot(x="Metric", y="Time (seconds)", hue="Client ID", data=df_melted)
     plt.title('Performance Metrics per Client', fontweight='bold')
@@ -157,8 +154,8 @@ def generate_total_time_graph():
     df = pd.read_csv(csv_file)
 
     plt.figure(figsize=(12, 6))
-    sns.lineplot(x='FL Round', y='Total Time', hue='Client ID', data=df, marker="o", markersize=8)
-    plt.title('Total Time per Round per Client', fontweight='bold')
+    sns.lineplot(x='FL Round', y='Total Client Time', hue='Client ID', data=df, marker="o", markersize=8)
+    plt.title('Total Client Time per Round', fontweight='bold')
     plt.ylabel('Total Time (seconds)', fontweight='bold')
     plt.xlabel('FL Round', fontweight='bold')
     plt.tight_layout()
@@ -221,7 +218,7 @@ def generate_communication_time_graph():
     plt.close()
 
 
-def weighted_average_global(metrics: List[Tuple[int, Metrics]], task_type: str, srt1, srt2, communication_time) -> Metrics:
+def weighted_average_global(metrics: List[Tuple[int, Metrics]], task_type: str, srt1, srt2, time_between_rounds) -> Metrics:
     examples = [num_examples for num_examples, _ in metrics]
     total_examples = sum(examples)
     if total_examples == 0:
@@ -253,13 +250,15 @@ def weighted_average_global(metrics: List[Tuple[int, Metrics]], task_type: str, 
         model_type = m.get("model_type")
         training_time = m.get("training_time")
         cpu_usage = m.get("cpu_usage")
+        communication_start_time = m.get("communication_start_time")
        
         if client_id:
             if not client_registry.is_registered(client_id):
                 client_registry.register_client(client_id, model_type)
 
-            total_time = training_time + communication_time
-            # Log including model_type, srt1, and srt2
+            total_time = training_time + time_between_rounds
+            communication_time = time.time() - communication_start_time
+            srt2 = time_between_rounds
             log_round_time(client_id, currentRnd, training_time, communication_time, total_time, cpu_usage, model_type, already_logged, srt1, srt2)
 
             already_logged = True
@@ -296,6 +295,8 @@ def print_results():
 
 # Initialize the client_model_mapping dictionary
 client_model_mapping = {}
+
+previous_round_end_time = time.time() 
 
 # Definition of the custom strategy
 class MultiModelStrategy(Strategy):
@@ -354,19 +355,32 @@ class MultiModelStrategy(Strategy):
         results: List[Tuple[ClientProxy, FitRes]],
         failures: List[BaseException],
     ) -> Optional[Tuple[Parameters, Dict[str, Scalar]]]:
+        
+        global previous_round_end_time
+        aggregation_start_time = time.time()
 
+        if previous_round_end_time is not None:
+            if server_round-1 == 1:
+                time_between_rounds = aggregation_start_time - previous_round_end_time
+                print(f"Results Aggregated in {time_between_rounds:.2f} seconds.")
+            else:
+                time_between_rounds = aggregation_start_time - previous_round_end_time
+                print(f"Results Aggregated in {time_between_rounds:.2f} seconds")
+     
         results_a = []
         results_b = []
         training_times = []
-
+        global currentRnd
+        currentRnd += 1
         srt1 = 'N/A'
         srt2 = 'N/A'
         
         for client_proxy, fit_res in results:
+
             client_id = fit_res.metrics.get("client_id")
             model_type = fit_res.metrics.get("model_type")
             training_time = fit_res.metrics.get("training_time")
-            communication_start_time = fit_res.metrics.get("communication_start_time")
+            communication_start_time = fit_res.metrics.get("communication_start_time") 
 
             client_model_mapping[client_id] = model_type
 
@@ -381,26 +395,19 @@ class MultiModelStrategy(Strategy):
                 print(f"Unknown Model Type for client {client_id}")
                 continue
 
+        previous_round_end_time = time.time()
 
         # Aggrega i parametri per taskA
         if results_a:
-            print(f"Aggregating parameters for taskA with {len(results_a)} results")
             srt1 = max(training_times)
-            srt2 = "2"
-            communication_time = time.time() - communication_start_time
-            print(f"Communication time for client {client_id}: {communication_time}")
-            self.parameters_a = self.aggregate_parameters(results_a, "taskA", srt1, srt2, communication_time)
+            self.parameters_a = self.aggregate_parameters(results_a, "taskA", srt1, srt2, time_between_rounds)
 
         # Aggrega i parametri per taskB
         if results_b:
-            print(f"Aggregating parameters for taskB with {len(results_b)} results")
-            communication_time = time.time() - communication_start_time
             srt1 = max(training_times)
-            srt2 = "2"
-            print(f"Communication time for client {client_id}: {communication_time}")
-            self.parameters_b = self.aggregate_parameters(results_b, "taskB", srt1, srt2, communication_time)
+            self.parameters_b = self.aggregate_parameters(results_b, "taskB", srt1, srt2, time_between_rounds)
+ 
 
-        # Combiniamo le metriche aggregate
         metrics_aggregated = {
             "taskA": {
                 "train_loss": global_metrics["taskA"]["train_loss"][-1] if global_metrics["taskA"]["train_loss"] else None,
@@ -416,11 +423,6 @@ class MultiModelStrategy(Strategy):
             },
         }
 
-        print_results()
-
-        global currentRnd
-        currentRnd += 1
-
         if currentRnd == num_rounds:
             print("Starting graph generation...")
             generate_performance_graphs()
@@ -431,7 +433,7 @@ class MultiModelStrategy(Strategy):
 
         return (self.parameters_a, self.parameters_b), metrics_aggregated
 
-    def aggregate_parameters(self, results, task_type, srt1, srt2,communication_time):
+    def aggregate_parameters(self, results, task_type, srt1, srt2,time_between_rounds):
         # Aggregate weights using weighted average based on number of examples
         total_examples = sum([num_examples for _, num_examples, _ in results])
         new_weights = None
@@ -440,7 +442,7 @@ class MultiModelStrategy(Strategy):
         for client_params, num_examples, client_metrics in results:
             client_weights = parameters_to_ndarrays(client_params)
             weight = num_examples / total_examples
-            print(f"Aggregating parameters for {task_type}, num_examples: {num_examples}, weight: {weight}")
+            #print(f"Aggregating parameters for {task_type}, num_examples: {num_examples}, weight: {weight}")
             if new_weights is None:
                 new_weights = [w * weight for w in client_weights]
             else:
@@ -448,7 +450,7 @@ class MultiModelStrategy(Strategy):
             metrics.append((num_examples, client_metrics))
 
         # Aggregate metrics
-        weighted_average_global(metrics, task_type, srt1, srt2, communication_time)
+        weighted_average_global(metrics, task_type, srt1, srt2, time_between_rounds)
 
         return ndarrays_to_parameters(new_weights)
 

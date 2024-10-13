@@ -16,7 +16,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock 
     environment:
       DOCKER_HOST_IP: host.docker.internal
-      NUM_ROUNDS: 2
+      NUM_ROUNDS: ${NUM_ROUNDS}
     networks:
       - flwr_network
     deploy:
