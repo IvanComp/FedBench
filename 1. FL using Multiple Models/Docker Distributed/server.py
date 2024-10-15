@@ -95,6 +95,27 @@ def log_round_time(client_id, fl_round, training_time, communication_time, total
         ])
     client_registry.update_client(client_id, True)
 
+def preprocess_csv():
+    import pandas as pd
+
+    df = pd.read_csv(csv_file)
+    df['Communication Time'] = pd.to_numeric(df['Communication Time'], errors='coerce')
+    max_comm_time_b = df[df['Task'] == 'taskB']['Communication Time'].max()
+    print(f"Tempo di comunicazione massimo tra i client B: {max_comm_time_b}")
+
+    if pd.isna(max_comm_time_b):
+        print("Non sono stati trovati tempi di comunicazione per i client B. Nessuna correzione effettuata per i tempi di comunicazione.")
+    else:
+        df.loc[df['Task'] == 'taskA', 'Communication Time'] = df.loc[df['Task'] == 'taskA', 'Communication Time'] - max_comm_time_b
+        df['Communication Time'] = df['Communication Time'].clip(lower=0)
+        df.loc[df['Task'] == 'taskA', 'Total Client Time'] = df.loc[df['Task'] == 'taskA', 'Training Time'] + df.loc[df['Task'] == 'taskA', 'Communication Time']
+
+    unique_clients = sorted(df['Client ID'].unique())
+    client_mapping = {old_id: f'client{i+1}' for i, old_id in enumerate(unique_clients)}
+    df['Client ID'] = df['Client ID'].map(client_mapping)
+    df.sort_values(by=['FL Round', 'Client ID'], inplace=True)
+    df.to_csv(csv_file, index=False)
+
 # Function to generate performance graphs
 def generate_performance_graphs():
     sns.set_theme(style="ticks")
@@ -165,6 +186,9 @@ def generate_total_time_graph():
     plt.title('Total Client Time per Round', fontweight='bold')
     plt.ylabel('Total Time (seconds)', fontweight='bold')
     plt.xlabel('FL Round', fontweight='bold')
+    min_round = df['FL Round'].min()
+    max_round = df['FL Round'].max()
+    plt.xticks(range(min_round, max_round + 1))
     plt.tight_layout()
 
     line_graph_path = os.path.join(performance_dir, 'totalTime_round.pdf')
@@ -188,6 +212,9 @@ def generate_training_time_graph():
     plt.title('Training Time per Round per Client', fontweight='bold')
     plt.ylabel('Training Time (seconds)', fontweight='bold')
     plt.xlabel('FL Round', fontweight='bold')
+    min_round = df['FL Round'].min()
+    max_round = df['FL Round'].max()
+    plt.xticks(range(min_round, max_round + 1))
     plt.tight_layout()
 
     line_graph_path = os.path.join(performance_dir, 'trainingTime_round.pdf')
@@ -211,6 +238,10 @@ def generate_communication_time_graph():
     plt.title('Communication Time per Round per Client', fontweight='bold')
     plt.ylabel('Communication Time (seconds)', fontweight='bold')
     plt.xlabel('FL Round', fontweight='bold')
+    min_round = df['FL Round'].min()
+    max_round = df['FL Round'].max()
+    plt.xticks(range(min_round, max_round + 1))
+
     plt.tight_layout()
 
     line_graph_path = os.path.join(performance_dir, 'communicationTime_round.pdf')
@@ -441,6 +472,7 @@ class MultiModelStrategy(Strategy):
         }
 
         if currentRnd == num_rounds:
+            preprocess_csv()
             print("Starting graph generation...")
             generate_performance_graphs()
             generate_cpu_usage_graph()
