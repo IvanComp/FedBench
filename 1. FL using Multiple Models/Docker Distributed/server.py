@@ -44,7 +44,7 @@ global_metrics = {
 matplotlib.use('Agg')
 current_dir = os.path.abspath(os.path.dirname(__file__))
 
-num_rounds = int(os.getenv("NUM_ROUNDS", 2))
+num_rounds = int(os.getenv("NUM_ROUNDS", 10))
 currentRnd = 0
 
 
@@ -62,8 +62,7 @@ with open(csv_file, 'w', newline='') as file:
                      'Train Loss', 'Train Accuracy', 'Val Loss', 'Val Accuracy', 'Total Time of Training Round', 'Total Time of FL Round'])
 
 def log_round_time(client_id, fl_round, training_time, communication_time, total_time, cpu_usage, model_type, already_logged, srt1, srt2):
-    total_time = training_time + communication_time
-    
+
     train_loss = round(global_metrics[model_type]["train_loss"][-1]) if global_metrics[model_type]["train_loss"] else 'N/A'
     train_accuracy = round(global_metrics[model_type]["train_accuracy"][-1], 2) if global_metrics[model_type]["train_accuracy"] else 'N/A'
     val_loss = round(global_metrics[model_type]["val_loss"][-1]) if global_metrics[model_type]["val_loss"] else 'N/A'
@@ -253,10 +252,10 @@ def weighted_average_global(metrics: List[Tuple[int, Metrics]], task_type: str, 
         if client_id:
             if not client_registry.is_registered(client_id):
                 client_registry.register_client(client_id, model_type)
-
-            total_time = training_time + time_between_rounds
+          
             srt2 = time_between_rounds
             communication_time = srt2 - training_time
+            total_time = training_time + communication_time
             log_round_time(client_id, currentRnd, training_time, round(communication_time, 2), total_time, cpu_usage, model_type, already_logged, srt1, srt2)
 
             already_logged = True
@@ -312,7 +311,7 @@ class MultiModelStrategy(Strategy):
         parameters: Parameters,
         client_manager: ClientManager,
     ) -> List[Tuple[ClientProxy, FitIns]]:
-        min_clients = 2
+        min_clients = 6
 
         # Wait until there are enough clients
         while client_manager.num_available() < min_clients:

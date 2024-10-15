@@ -48,7 +48,7 @@ class FlowerClient(NumPyClient):
         cpu_start = psutil.cpu_percent(interval=None)
 
         set_weights_B(self.net, parameters)
-        results, training_time = train_B(self.net, self.trainloader, self.testloader, epochs=2, device=self.device)
+        results, training_time = train_B(self.net, self.trainloader, self.testloader, epochs=5, device=self.device)
         communication_start_time = time.time()      
         
         new_parameters = get_weights_B(self.net)
