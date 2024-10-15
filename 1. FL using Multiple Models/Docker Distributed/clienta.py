@@ -59,15 +59,17 @@ class FlowerClient(NumPyClient):
         metrics = {
             "train_loss": results["train_loss"],
             "train_accuracy": results["train_accuracy"],
+            "train_f1": results["train_f1"],
             "val_loss": results["val_loss"],
             "val_accuracy": results["val_accuracy"],
+            "val_f1": results["val_f1"],
             "training_time": training_time,
             "cpu_usage": cpu_usage,
             "client_id": self.cid,
             "model_type": self.model_type,
             "communication_start_time": communication_start_time,
         }
-        
+
         return new_parameters, len(self.trainloader.dataset), metrics
 
     def evaluate(self, parameters, config):
@@ -83,7 +85,6 @@ class FlowerClient(NumPyClient):
         }
         return loss, len(self.testloader.dataset), metrics
 
-# Legacy mode
 if __name__ == "__main__":
     from flwr.client import start_client
 

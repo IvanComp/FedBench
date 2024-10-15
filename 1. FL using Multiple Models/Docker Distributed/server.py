@@ -36,8 +36,8 @@ import psutil
 client_registry = ClientRegistry()
 
 global_metrics = {
-    "taskA": {"train_loss": [], "train_accuracy": [], "val_loss": [], "val_accuracy": []},
-    "taskB": {"train_loss": [], "train_accuracy": [], "val_loss": [], "val_accuracy": []},
+    "taskA": {"train_loss": [], "train_accuracy": [], "train_f1": [],"val_loss": [], "val_accuracy": [], "val_f1": []},
+    "taskB": {"train_loss": [], "train_accuracy": [], "train_f1": [],"val_loss": [], "val_accuracy": [], "val_f1": []},
 }
 
 # Set the non-interactive backend of matplotlib
@@ -58,21 +58,28 @@ if os.path.exists(csv_file):
 
 with open(csv_file, 'w', newline='') as file:
     writer = csv.writer(file)
-    writer.writerow(['Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Client Time', 'CPU Usage (%)', 'Task',
-                     'Train Loss', 'Train Accuracy', 'Val Loss', 'Val Accuracy', 'Total Time of Training Round', 'Total Time of FL Round'])
+    writer.writerow([
+        'Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Client Time',
+        'CPU Usage (%)', 'Task', 'Train Loss', 'Train Accuracy', 'Train F1',
+        'Val Loss', 'Val Accuracy', 'Val F1', 'Total Time of Training Round', 'Total Time of FL Round'
+    ])
 
-def log_round_time(client_id, fl_round, training_time, communication_time, total_time, cpu_usage, model_type, already_logged, srt1, srt2):
-
+def log_round_time(client_id, fl_round, training_time, communication_time, total_time, cpu_usage,
+                   model_type, already_logged, srt1, srt2):
     train_loss = round(global_metrics[model_type]["train_loss"][-1]) if global_metrics[model_type]["train_loss"] else 'N/A'
     train_accuracy = round(global_metrics[model_type]["train_accuracy"][-1], 2) if global_metrics[model_type]["train_accuracy"] else 'N/A'
+    train_f1 = round(global_metrics[model_type]["train_f1"][-1], 2) if global_metrics[model_type]["train_f1"] else 'N/A'
     val_loss = round(global_metrics[model_type]["val_loss"][-1]) if global_metrics[model_type]["val_loss"] else 'N/A'
     val_accuracy = round(global_metrics[model_type]["val_accuracy"][-1], 2) if global_metrics[model_type]["val_accuracy"] else 'N/A'
+    val_f1 = round(global_metrics[model_type]["val_f1"][-1], 2) if global_metrics[model_type]["val_f1"] else 'N/A'
 
     if already_logged:
         train_loss = ""
         train_accuracy = ""
+        train_f1 = ""
         val_loss = ""
         val_accuracy = ""
+        val_f1 = ""
         srt1 = ""
         srt2 = ""
 
@@ -81,8 +88,11 @@ def log_round_time(client_id, fl_round, training_time, communication_time, total
 
     with open(csv_file, 'a', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow([client_id, fl_round+1, round(training_time), round(communication_time, 2), round(total_time), round(cpu_usage), model_type,
-                         train_loss, train_accuracy, val_loss, val_accuracy, srt1_rounded, srt2_rounded])
+        writer.writerow([
+            client_id, fl_round+1, round(training_time), round(communication_time, 2), round(total_time),
+            round(cpu_usage), model_type, train_loss, train_accuracy, train_f1,
+            val_loss, val_accuracy, val_f1, srt1_rounded, srt2_rounded
+        ])
     client_registry.update_client(client_id, True)
 
 # Function to generate performance graphs
@@ -214,31 +224,39 @@ def generate_communication_time_graph():
         
     plt.close()
 
-
-def weighted_average_global(metrics: List[Tuple[int, Metrics]], task_type: str, srt1, srt2, time_between_rounds) -> Metrics:
+def weighted_average_global(metrics, task_type, srt1, srt2, time_between_rounds):
     examples = [num_examples for num_examples, _ in metrics]
     total_examples = sum(examples)
     if total_examples == 0:
         return {
             "train_loss": float('inf'),
             "train_accuracy": 0.0,
+            "train_f1": 0.0,
+            "val_loss": float('inf'),
+            "val_accuracy": 0.0,
+            "val_f1": 0.0,
         }
 
     train_losses = [num_examples * m["train_loss"] for num_examples, m in metrics]
     train_accuracies = [num_examples * m["train_accuracy"] for num_examples, m in metrics]
+    train_f1s = [num_examples * m["train_f1"] for num_examples, m in metrics]
     val_losses = [num_examples * m["val_loss"] for num_examples, m in metrics]
     val_accuracies = [num_examples * m["val_accuracy"] for num_examples, m in metrics]
+    val_f1s = [num_examples * m["val_f1"] for num_examples, m in metrics]
 
     avg_train_loss = sum(train_losses) / total_examples
     avg_train_accuracy = sum(train_accuracies) / total_examples
+    avg_train_f1 = sum(train_f1s) / total_examples
     avg_val_loss = sum(val_losses) / total_examples
     avg_val_accuracy = sum(val_accuracies) / total_examples
+    avg_val_f1 = sum(val_f1s) / total_examples
 
-    # Store metrics in the global dictionary
     global_metrics[task_type]["train_loss"].append(avg_train_loss)
     global_metrics[task_type]["train_accuracy"].append(avg_train_accuracy)
+    global_metrics[task_type]["train_f1"].append(avg_train_f1)
     global_metrics[task_type]["val_loss"].append(avg_val_loss)
     global_metrics[task_type]["val_accuracy"].append(avg_val_accuracy)
+    global_metrics[task_type]["val_f1"].append(avg_val_f1)
 
     already_logged = False
 
@@ -263,8 +281,10 @@ def weighted_average_global(metrics: List[Tuple[int, Metrics]], task_type: str, 
     return {
         "train_loss": avg_train_loss,
         "train_accuracy": avg_train_accuracy,
+        "train_f1": avg_train_f1,
         "val_loss": avg_val_loss,
         "val_accuracy": avg_val_accuracy,
+        "val_f1": avg_val_f1,
     }
 
 # Initialize weights separately for taskA and taskB
@@ -311,7 +331,7 @@ class MultiModelStrategy(Strategy):
         parameters: Parameters,
         client_manager: ClientManager,
     ) -> List[Tuple[ClientProxy, FitIns]]:
-        min_clients = 6
+        min_clients = 4
 
         # Wait until there are enough clients
         while client_manager.num_available() < min_clients:
