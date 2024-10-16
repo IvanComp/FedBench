@@ -21,6 +21,7 @@ from flwr.server.strategy import Strategy
 from flwr.server.client_manager import ClientManager
 from flwr.server.client_proxy import ClientProxy
 from prometheus_client import Gauge, start_http_server
+from flwr.common.logger import log
 from taskA import Net as NetA, get_weights as get_weights_A
 from taskB import Net as NetB, get_weights as get_weights_B
 import time
@@ -304,7 +305,7 @@ def weighted_average_global(metrics, task_type, srt1, srt2, time_between_rounds)
             srt2 = time_between_rounds
             communication_time = srt2 - training_time
             total_time = training_time + communication_time
-            log_round_time(client_id, currentRnd, training_time, round(communication_time, 2), total_time, cpu_usage, model_type, already_logged, srt1, srt2)
+            log_round_time(client_id, currentRnd-1, training_time, round(communication_time, 2), total_time, cpu_usage, model_type, already_logged, srt1, srt2)
 
             already_logged = True
 
@@ -402,6 +403,7 @@ class MultiModelStrategy(Strategy):
         results: List[Tuple[ClientProxy, FitRes]],
         failures: List[BaseException],
     ) -> Optional[Tuple[Parameters, Dict[str, Scalar]]]:
+        from logging import INFO
         
         global previous_round_end_time
         aggregation_start_time = time.time()
@@ -409,10 +411,10 @@ class MultiModelStrategy(Strategy):
         if previous_round_end_time is not None:
             if server_round-1 == 1:
                 time_between_rounds = aggregation_start_time - previous_round_end_time
-                print(f"Results Aggregated in {time_between_rounds:.2f} seconds.")
+                log(INFO, f"Results Aggregated in {time_between_rounds:.2f} seconds.")
             else:
                 time_between_rounds = aggregation_start_time - previous_round_end_time
-                print(f"Results Aggregated in {time_between_rounds:.2f} seconds")
+                log(INFO, f"Results Aggregated in {time_between_rounds:.2f} seconds")
      
         results_a = []
         results_b = []
