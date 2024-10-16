@@ -17,8 +17,6 @@ services:
     environment:
       DOCKER_HOST_IP: host.docker.internal
       NUM_ROUNDS: ${NUM_ROUNDS}
-      CLIENTA_SCALE: ${CLIENTA_SCALE:2}
-      CLIENTB_SCALE: ${CLIENTB_SCALE:2} 
     networks:
       - flwr_network
     deploy:
@@ -30,8 +28,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.clienta
-    environment:
-      - SERVICE_NAME=${CLIENTA_SCALE:2} 
     depends_on:
       - server
     networks:
@@ -49,8 +45,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.clientb
-    environment:
-      - SERVICE_NAME=${CLIENTB_SCALE:2} 
     depends_on:
       - server
     networks:
