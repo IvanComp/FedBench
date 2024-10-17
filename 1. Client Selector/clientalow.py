@@ -50,7 +50,9 @@ class FlowerClient(NumPyClient):
         n_cpu = query_cpu()
 
         if n_cpu < 2:
-            log(INFO, f"Client {self.cid} ha meno di 2 CPUs ({n_cpu}). Uscita dal round.")
+            log(INFO, f"Client {self.cid} has fewer than 2 CPUs ({n_cpu}). It will not participate in the FL round.")
+            log(INFO, f"Preparing empty reply")
+            return parameters, 0, {} 
         
         set_weights_A(self.net, parameters)
         results, training_time = train_A(self.net, self.trainloader, self.testloader, epochs=1, device=self.device)       

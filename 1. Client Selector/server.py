@@ -102,7 +102,7 @@ def preprocess_csv():
     max_comm_time_b = df[df['Task'] == 'taskB']['Communication Time'].max()
 
     if pd.isna(max_comm_time_b):
-        print("Non sono stati trovati tempi di comunicazione per i client B. Nessuna correzione effettuata per i tempi di comunicazione.")
+        pass
     else:
         df.loc[df['Task'] == 'taskA', 'Communication Time'] = df.loc[df['Task'] == 'taskA', 'Communication Time'] - max_comm_time_b
         df['Communication Time'] = df['Communication Time'].clip(lower=0)
@@ -311,10 +311,10 @@ def print_results():
     print(f"  Clients: {clients_taskA}")
     print(f"  Train loss: {global_metrics['taskA']['train_loss']}")
     print(f"  Train accuracy: {global_metrics['taskA']['train_accuracy']}")
-    print(f"  Train F1: {global_metrics['taskA']['avg_train_f1']}")
+    print(f"  Train F1: {global_metrics['taskA']['train_f1']}")
     print(f"  Val loss: {global_metrics['taskA']['val_loss']}")
     print(f"  Val accuracy: {global_metrics['taskA']['val_accuracy']}")
-    print(f"  Val F1: {global_metrics['taskA']['avg_val_f1']}")
+    print(f"  Val F1: {global_metrics['taskA']['val_f1']}")
 
 # Initialize the client_model_mapping dictionary
 client_model_mapping = {}
@@ -339,6 +339,10 @@ class MultiModelStrategy(Strategy):
         # Wait until there are enough clients
         while client_manager.num_available() < min_clients:
             time.sleep(1)
+            log(INFO, f"Starting the Clients Selector...")
+            time.sleep(5)
+            log(INFO, f"Selection Criteria: CPUs > 1")
+            time.sleep(5)
         
         # Sample available clients after reaching the minimum number
         clients = client_manager.sample(num_clients=min_clients)
@@ -355,9 +359,6 @@ class MultiModelStrategy(Strategy):
 
             # Add the configuration
             fit_configurations.append((client, fit_ins))
-            log(INFO, f"Client {client.cid} selezionato per il round")
-        
-            #log(INFO, f"Client {client.cid} escluso per numero di CPU insufficiente ({n_cpu})")
 
         return fit_configurations
 
@@ -401,9 +402,7 @@ class MultiModelStrategy(Strategy):
 
             if model_type == "taskA" and n_cpu > 1:
                 results_a.append((fit_res.parameters, fit_res.num_examples, fit_res.metrics))
-                log(INFO, f"Client {client_id} with {n_cpu} CPUs selected in the Federated Learning Round")
             else:
-                log(INFO, f"Client {client_id} with {n_cpu} CPUs excluded from the Federated Learning Round")
                 continue
 
         previous_round_end_time = time.time()
@@ -417,10 +416,14 @@ class MultiModelStrategy(Strategy):
             "taskA": {
                 "train_loss": global_metrics["taskA"]["train_loss"][-1] if global_metrics["taskA"]["train_loss"] else None,
                 "train_accuracy": global_metrics["taskA"]["train_accuracy"][-1] if global_metrics["taskA"]["train_accuracy"] else None,
+                "train_f1": global_metrics["taskA"]["train_f1"][-1] if global_metrics["taskA"]["train_f1"] else None,
                 "val_loss": global_metrics["taskA"]["val_loss"][-1] if global_metrics["taskA"]["val_loss"] else None,
                 "val_accuracy": global_metrics["taskA"]["val_accuracy"][-1] if global_metrics["taskA"]["val_accuracy"] else None,
+                "val_f1": global_metrics["taskA"]["val_f1"][-1] if global_metrics["taskA"]["val_f1"] else None,
             },
         }
+
+        print_results()
 
         if currentRnd == num_rounds:
             preprocess_csv()
