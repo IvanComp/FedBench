@@ -9,11 +9,11 @@ The Federated Learning system is supported by [Flower](https://github.com/adap/f
 
 The Flower framework was extended by adding 3 different Architectural Patterns for Clients Management [1]:
 
-- 1 Client Registry.
+- 1 Client Selector.
 
-- 2 Client Selector.
+- 2 Client Clustering.
 
-- 3 Client Clustering.
+- 3 Message Compressor.
 
 # Table of contents
 <!--ts-->
@@ -25,9 +25,11 @@ The Flower framework was extended by adding 3 different Architectural Patterns f
 
 This repository is divided in two main folders:
 
-- __1. FL using Multiple Models/__: Examples for running FL simulations considering multiple models
+- __1. Client Selector/__: Running FL simulations considering the Client Selector pattern
 
-- __2. FL using Singles Models/__: Examples for running FL simulations considering singles models
+- __2. Client Clustering/__: Running FL simulations considering the Client Clustering pattern
+
+- __3. Message Compressor/__: Running FL simulations considering the Message Compressor pattern
 
 # How To Run:
 
@@ -39,6 +41,32 @@ It's possible to run the framework in two ways.
 
 ## To run the Simulation on Docker containers:
 
+# Client Selector
+
+In the target with 'docker-compose' file, enter the following command:
+
+```bash
+#Build Docker images
+docker compose build
+
+#Launch Docker images (Server, 2 Clients A with 2 CPU, 2 Client A with 1 CPU, Prometheus, Grafana)
+NUM_ROUNDS=2 docker-compose up --scale clientahigh=2 --scale clientalow=2
+```
+
+# Client Clustering
+
+In the target with 'docker-compose' file, enter the following command:
+
+```bash
+#Build Docker images
+docker compose build
+
+#Launch Docker images (Server, 2 Clients A, 2 Clients B, Prometheus, Grafana)
+NUM_ROUNDS=2 docker-compose up --scale clienta=2 --scale clientb=2
+```
+
+# Message Compressor
+
 In the target with 'docker-compose' file, enter the following command:
 
 ```bash
@@ -46,7 +74,7 @@ In the target with 'docker-compose' file, enter the following command:
 docker compose build
 
 #Launch Docker images (Server, 3 Client A, 3 Client B, Prometheus, Grafana)
-NUM_ROUNDS=2 docker-compose up --scale clienta=2 --scale clientb=0
+
 ```
 
 ## To run the Simulation Locally:
