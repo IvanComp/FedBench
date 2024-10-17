@@ -23,7 +23,6 @@ from flwr.server.client_proxy import ClientProxy
 from prometheus_client import Gauge, start_http_server
 from flwr.common.logger import log
 from taskA import Net as NetA, get_weights as get_weights_A
-from taskB import Net as NetB, get_weights as get_weights_B
 import time
 import csv
 import os
@@ -38,7 +37,6 @@ client_registry = ClientRegistry()
 
 global_metrics = {
     "taskA": {"train_loss": [], "train_accuracy": [], "train_f1": [],"val_loss": [], "val_accuracy": [], "val_f1": []},
-    "taskB": {"train_loss": [], "train_accuracy": [], "train_f1": [],"val_loss": [], "val_accuracy": [], "val_f1": []},
 }
 
 # Set the non-interactive backend of matplotlib
@@ -102,10 +100,9 @@ def preprocess_csv():
     df = pd.read_csv(csv_file)
     df['Communication Time'] = pd.to_numeric(df['Communication Time'], errors='coerce')
     max_comm_time_b = df[df['Task'] == 'taskB']['Communication Time'].max()
-    print(f"Tempo di comunicazione massimo tra i client B: {max_comm_time_b}")
 
     if pd.isna(max_comm_time_b):
-        print("Non sono stati trovati tempi di comunicazione per i client B. Nessuna correzione effettuata per i tempi di comunicazione.")
+        pass
     else:
         df.loc[df['Task'] == 'taskA', 'Communication Time'] = df.loc[df['Task'] == 'taskA', 'Communication Time'] - max_comm_time_b
         df['Communication Time'] = df['Communication Time'].clip(lower=0)
@@ -328,26 +325,19 @@ def weighted_average_global(metrics, task_type, srt1, srt2, time_between_rounds)
 
 # Initialize weights separately for taskA and taskB
 parametersA = ndarrays_to_parameters(get_weights_A(NetA()))
-parametersB = ndarrays_to_parameters(get_weights_B(NetB()))
 
 def print_results():
     # Collect clients for each task using cid
     clients_taskA = [cid for cid, model in client_model_mapping.items() if model == "taskA" and len(cid) <= 12]
-    clients_taskB = [cid for cid, model in client_model_mapping.items() if model == "taskB" and len(cid) <= 12]
 
     print("\nResults for Model A:")
     print(f"  Clients: {clients_taskA}")
     print(f"  Train loss: {global_metrics['taskA']['train_loss']}")
     print(f"  Train accuracy: {global_metrics['taskA']['train_accuracy']}")
+    print(f"  Train F1: {global_metrics['taskA']['train_f1']}")
     print(f"  Val loss: {global_metrics['taskA']['val_loss']}")
     print(f"  Val accuracy: {global_metrics['taskA']['val_accuracy']}")
-
-    print("\nResults for Model B:")
-    print(f"  Clients: {clients_taskB}")
-    print(f"  Train loss: {global_metrics['taskB']['train_loss']}")
-    print(f"  Train accuracy: {global_metrics['taskB']['train_accuracy']}")
-    print(f"  Val loss: {global_metrics['taskB']['val_loss']}")
-    print(f"  Val accuracy: {global_metrics['taskB']['val_accuracy']}\n")
+    print(f"  Val F1: {global_metrics['taskA']['val_f1']}")
 
 # Initialize the client_model_mapping dictionary
 client_model_mapping = {}
@@ -356,9 +346,8 @@ previous_round_end_time = time.time()
 
 # Definition of the custom strategy
 class MultiModelStrategy(Strategy):
-    def __init__(self, initial_parameters_a: Parameters, initial_parameters_b: Parameters):
+    def __init__(self, initial_parameters_a: Parameters):
         self.parameters_a = initial_parameters_a
-        self.parameters_b = initial_parameters_b
 
     def initialize_parameters(self, client_manager: ClientManager) -> Optional[Parameters]:
         # Return None because we use separate initial parameters for A and B
@@ -370,7 +359,7 @@ class MultiModelStrategy(Strategy):
         parameters: Parameters,
         client_manager: ClientManager,
     ) -> List[Tuple[ClientProxy, FitIns]]:
-        min_clients = 4
+        min_clients = 2
 
         # Wait until there are enough clients
         while client_manager.num_available() < min_clients:
@@ -381,21 +370,10 @@ class MultiModelStrategy(Strategy):
 
         fit_configurations = []
 
-        task_flag = True  # Start with True for taskA
-
         for i, client in enumerate(clients):
             client_id = client.cid
-
-            # Alternate between taskA and taskB
-            if task_flag:
-                fit_ins = FitIns(self.parameters_a, {})
-                model_type = "taskA"
-            else:
-                fit_ins = FitIns(self.parameters_b, {})
-                model_type = "taskB"
-            
-            # Alternate the flag
-            task_flag = not task_flag
+            fit_ins = FitIns(self.parameters_a, {})
+            model_type = "taskA"
             
             # Map the model to the client
             client_model_mapping[client_id] = model_type
@@ -446,11 +424,6 @@ class MultiModelStrategy(Strategy):
 
             if model_type == "taskA":
                 results_a.append((fit_res.parameters, fit_res.num_examples, fit_res.metrics))
-            elif model_type == "taskB":
-                results_b.append((fit_res.parameters, fit_res.num_examples, fit_res.metrics))
-            else:
-                print(f"Unknown Model Type for client {client_id}")
-                continue
 
         previous_round_end_time = time.time()
 
@@ -472,12 +445,6 @@ class MultiModelStrategy(Strategy):
                 "val_loss": global_metrics["taskA"]["val_loss"][-1] if global_metrics["taskA"]["val_loss"] else None,
                 "val_accuracy": global_metrics["taskA"]["val_accuracy"][-1] if global_metrics["taskA"]["val_accuracy"] else None,
             },
-            "taskB": {
-                "train_loss": global_metrics["taskB"]["train_loss"][-1] if global_metrics["taskB"]["train_loss"] else None,
-                "train_accuracy": global_metrics["taskB"]["train_accuracy"][-1] if global_metrics["taskB"]["train_accuracy"] else None,
-                "val_loss": global_metrics["taskB"]["val_loss"][-1] if global_metrics["taskB"]["val_loss"] else None,
-                "val_accuracy": global_metrics["taskB"]["val_accuracy"][-1] if global_metrics["taskB"]["val_accuracy"] else None,
-            },
         }
 
         if currentRnd == num_rounds:
@@ -489,7 +456,7 @@ class MultiModelStrategy(Strategy):
             generate_training_time_graph()
             generate_communication_time_graph()
 
-        return (self.parameters_a, self.parameters_b), metrics_aggregated
+        return (self.parameters_a), metrics_aggregated
 
     def aggregate_parameters(self, results, task_type, srt1, srt2,time_between_rounds):
         # Aggregate weights using weighted average based on number of examples
@@ -541,7 +508,6 @@ if __name__ == "__main__":
     
     strategy = MultiModelStrategy(
         initial_parameters_a=parametersA,  
-        initial_parameters_b=parametersB,  
     )
 
     start_server(

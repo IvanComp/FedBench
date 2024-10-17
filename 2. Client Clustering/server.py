@@ -339,19 +339,19 @@ def print_results():
     print(f"  Clients: {clients_taskA}")
     print(f"  Train loss: {global_metrics['taskA']['train_loss']}")
     print(f"  Train accuracy: {global_metrics['taskA']['train_accuracy']}")
-    print(f"  Train F1: {global_metrics['taskA']['avg_train_f1']}")
+    print(f"  Train F1: {global_metrics['taskA']['train_f1']}")
     print(f"  Val loss: {global_metrics['taskA']['val_loss']}")
     print(f"  Val accuracy: {global_metrics['taskA']['val_accuracy']}")
-    print(f"  Val F1: {global_metrics['taskA']['avg_val_f1']}")
+    print(f"  Val F1: {global_metrics['taskA']['val_f1']}")
 
     print("\nResults for Model B:")
     print(f"  Clients: {clients_taskB}")
     print(f"  Train loss: {global_metrics['taskB']['train_loss']}")
     print(f"  Train accuracy: {global_metrics['taskB']['train_accuracy']}")
-    print(f"  Train F1: {global_metrics['taskB']['avg_train_f1']}")
+    print(f"  Train F1: {global_metrics['taskB']['train_f1']}")
     print(f"  Val loss: {global_metrics['taskB']['val_loss']}")
     print(f"  Val accuracy: {global_metrics['taskB']['val_accuracy']}\n")
-    print(f"  Val F1: {global_metrics['taskB']['avg_val_f1']}\n")
+    print(f"  Val F1: {global_metrics['taskB']['val_f1']}\n")
 
 # Initialize the client_model_mapping dictionary
 client_model_mapping = {}
@@ -473,16 +473,22 @@ class MultiModelStrategy(Strategy):
             "taskA": {
                 "train_loss": global_metrics["taskA"]["train_loss"][-1] if global_metrics["taskA"]["train_loss"] else None,
                 "train_accuracy": global_metrics["taskA"]["train_accuracy"][-1] if global_metrics["taskA"]["train_accuracy"] else None,
+                "train_accuracy": global_metrics["taskA"]["train_accuracy"][-1] if global_metrics["taskA"]["train_accuracy"] else None,
                 "val_loss": global_metrics["taskA"]["val_loss"][-1] if global_metrics["taskA"]["val_loss"] else None,
+                "val_accuracy": global_metrics["taskA"]["val_accuracy"][-1] if global_metrics["taskA"]["val_accuracy"] else None,
                 "val_accuracy": global_metrics["taskA"]["val_accuracy"][-1] if global_metrics["taskA"]["val_accuracy"] else None,
             },
             "taskB": {
                 "train_loss": global_metrics["taskB"]["train_loss"][-1] if global_metrics["taskB"]["train_loss"] else None,
                 "train_accuracy": global_metrics["taskB"]["train_accuracy"][-1] if global_metrics["taskB"]["train_accuracy"] else None,
+                "train_f1": global_metrics["taskA"]["train_f1"][-1] if global_metrics["taskA"]["train_f1"] else None,
                 "val_loss": global_metrics["taskB"]["val_loss"][-1] if global_metrics["taskB"]["val_loss"] else None,
                 "val_accuracy": global_metrics["taskB"]["val_accuracy"][-1] if global_metrics["taskB"]["val_accuracy"] else None,
+                "val_f1": global_metrics["taskA"]["val_f1"][-1] if global_metrics["taskA"]["val_f1"] else None,
             },
         }
+
+        print_results()
 
         if currentRnd == num_rounds:
             preprocess_csv()

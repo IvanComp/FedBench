@@ -1,11 +1,11 @@
-# Architectural Pattern for Federated Learning Systems
+# FedBench
 
 <p align="center">
 <img src="img/ArchitectureEval.png" width="650px" height="350px"/>
 </p>
 
 This is the repository for testing the performance of a Federated Learning system applying custom specifications.
-The Federated Learning system is supported by [Flower](https://github.com/adap/flower) Framework. 
+FedBench is supported by [Flower](https://github.com/adap/flower) Framework. 
 
 The Flower framework was extended by adding 3 different Architectural Patterns for Clients Management [1]:
 
@@ -19,6 +19,7 @@ The Flower framework was extended by adding 3 different Architectural Patterns f
 <!--ts-->
    * [Functionalities](#functionalities)
    * [How to run](#how-to-run)
+   * [Performance](#performance)
    * [References](#references)
    
 # Functionalities
@@ -86,6 +87,11 @@ flower-simulation --server-app server:app --client-app client:app --num-supernod
 ```
 
 Change the number of clients by modifying the value of the "--num-supernodes" variable.
+
+# Performance
+
+FedBench allows to generate a set of performance benchmarks (graphs) derived from the execution.
+They are automatically stored in the /performance folder.
 
 # References
 
