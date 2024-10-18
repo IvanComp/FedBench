@@ -39,7 +39,6 @@ def load_data():
     testset = CIFAR10("./data", train=False, download=True, transform=trf)
     return DataLoader(trainset, batch_size=32, shuffle=True), DataLoader(testset)
 
-
 def train(net, trainloader, valloader, epochs, device):
     """Train the model on the training set, measuring time."""
     log(INFO, "Starting training...")

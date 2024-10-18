@@ -26,12 +26,15 @@ from taskA import Net as NetA, get_weights as get_weights_A
 import time
 import csv
 import os
+import numpy as np
 import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
 from APClient import ClientRegistry
 import psutil
+import lz4.frame
+import pickle
 
 client_registry = ClientRegistry()
 
@@ -389,10 +392,11 @@ class MultiModelStrategy(Strategy):
         results: List[Tuple[ClientProxy, FitRes]],
         failures: List[BaseException],
     ) -> Optional[Tuple[Parameters, Dict[str, Scalar]]]:
-        from logging import INFO
-        
+        from logging import INFO       
         global previous_round_end_time
         aggregation_start_time = time.time()
+
+        #fit_res.parameters = zl4.decompress(fit_res.parameters)
 
         if previous_round_end_time is not None:
             if server_round-1 == 1:
@@ -416,6 +420,19 @@ class MultiModelStrategy(Strategy):
             model_type = fit_res.metrics.get("model_type")
             training_time = fit_res.metrics.get("training_time")
             communication_start_time = fit_res.metrics.get("communication_start_time") 
+
+            compressed_np = np.frombuffer(fit_res.parameters, dtype=np.uint8)
+            # Step 2: Converti l'array NumPy in bytes
+            compressed_data = compressed_np.tobytes()
+            # Step 3: Decomprimi i dati
+            decompressed_parameters_bytes = lz4.frame.decompress(compressed_data)
+            # Step 4: Deserializza i dati decompressi per ottenere i parametri originali
+            fit_res.parameters = pickle.loads(decompressed_parameters_bytes)
+
+
+            # Continua con la logica di aggregazione
+            if fit_res.metrics.get("model_type") == "taskA":
+                results_a.append((fit_res.parameters, fit_res.num_examples, fit_res.metrics))
 
             client_model_mapping[client_id] = model_type
 

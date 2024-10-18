@@ -4,8 +4,8 @@
 <img src="img/ArchitectureEval.png" width="650px" height="350px"/>
 </p>
 
-This is the repository for testing the performance of a Federated Learning system applying custom specifications.
-FedBench is supported by [Flower](https://github.com/adap/flower) Framework. 
+FedBench is a Federated Learning Platform for testing the performance of a Federated Learning system applying custom specifications.
+FedBench is developed extending [Flower](https://github.com/adap/flower) a Federated Learning Framework. 
 
 The Flower framework was extended by adding 3 different Architectural Patterns for Clients Management [1]:
 
