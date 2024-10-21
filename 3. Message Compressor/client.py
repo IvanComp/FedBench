@@ -63,7 +63,9 @@ class FlowerClient(NumPyClient):
             numpy_arrays = [np.load(BytesIO(tensor)) for tensor in decompressed_parameters.tensors]
             numpy_arrays = [arr.astype(np.float32) for arr in numpy_arrays]
 
-        set_weights_A(self.net, numpy_arrays)
+        parameters = numpy_arrays
+
+        set_weights_A(self.net, parameters)
         results, training_time = train_A(self.net, self.trainloader, self.testloader, epochs=1, device=self.device)       
         communication_start_time = time.time()
 

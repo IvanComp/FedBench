@@ -369,44 +369,34 @@ class MultiModelStrategy(Strategy):
         ) -> List[Tuple[ClientProxy, FitIns]]:
         min_clients = 2
 
-        # Attendere che ci siano abbastanza client disponibili
         while client_manager.num_available() < min_clients:
             time.sleep(1)  
 
-        # Campionare i client disponibili
         clients = client_manager.sample(num_clients=min_clients)
         fit_configurations = []
 
-        # Creare parametri finti con la stessa struttura di self.parameters_a
         fake_tensors = []
         for tensor in self.parameters_a.tensors:
-            # Caricare l'array reale per ottenere la forma e il dtype
             buffer = BytesIO(tensor)
             loaded_array = np.load(buffer)
             
-            # Creare un array di zeri con la stessa forma e dtype
-            fake_array = np.zeros_like(loaded_array)
+            reduced_shape = tuple(max(dim // 10, 1) for dim in loaded_array.shape)
+            fake_array = np.zeros(reduced_shape, dtype=loaded_array.dtype)
             
-            # Serializzare l'array finto in formato binario
             fake_serialized = BytesIO()
             np.save(fake_serialized, fake_array)
             fake_serialized.seek(0)
             fake_tensors.append(fake_serialized.read())
 
-        # Creare l'oggetto Parameters finto
         fake_parameters = Parameters(tensors=fake_tensors, tensor_type=self.parameters_a.tensor_type)
-
-        print(f"Fake Parameters: {fake_parameters}")
 
         for client in clients:
             client_id = client.cid               
 
-            # Serializzare e comprimere i parametri reali
             serialized_parameters = pickle.dumps(self.parameters_a)
             compressed_parameters = zlib.compress(serialized_parameters)
             compressed_parameters_hex = compressed_parameters.hex()
 
-            # Creare FitIns con parametri finti e config con parametri compressi
             fit_ins = FitIns(fake_parameters, {"compressed_parameters_hex": compressed_parameters_hex}) 
             
             client_model_mapping[client_id] = "taskA"
@@ -454,7 +444,6 @@ class MultiModelStrategy(Strategy):
                 decompressed_parameters = pickle.loads(zlib.decompress(compressed_parameters))
                 fit_res.parameters = ndarrays_to_parameters(decompressed_parameters)
 
-            # Continua con la logica di aggregazione
             if fit_res.metrics.get("model_type") == "taskA":
                 results_a.append((fit_res.parameters, fit_res.num_examples, fit_res.metrics))
 
@@ -468,16 +457,9 @@ class MultiModelStrategy(Strategy):
 
         previous_round_end_time = time.time()
 
-        # Aggrega i parametri per taskA
         if results_a:
             srt1 = max(training_times)
             self.parameters_a = self.aggregate_parameters(results_a, "taskA", srt1, srt2, time_between_rounds)
-
-        # Aggrega i parametri per taskB
-        if results_b:
-            srt1 = max(training_times)
-            self.parameters_b = self.aggregate_parameters(results_b, "taskB", srt1, srt2, time_between_rounds)
- 
 
         metrics_aggregated = {
             "taskA": {
