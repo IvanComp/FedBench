@@ -38,7 +38,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '5'
+          cpus: '4'
     command: sh -c "sleep 2 && python client.py"
 
 networks:

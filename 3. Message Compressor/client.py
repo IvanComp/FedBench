@@ -14,6 +14,7 @@ import hashlib
 import psutil
 import random
 import torch
+from io import BytesIO
 from taskA import (
     DEVICE as DEVICE_A,
     Net as NetA,
@@ -24,12 +25,14 @@ from taskA import (
     test as test_A
 )
 import zlib
+import lz4.frame
+import lz4.block
 import pickle
 import numpy as np
 from APClient import ClientRegistry
 
 MessageCompressorClientServer = True
-MessageCompressorServerClient = False
+MessageCompressorServerClient = True
 
 CLIENT_ID = os.getenv("HOSTNAME")
 
@@ -49,17 +52,25 @@ class FlowerClient(NumPyClient):
         client_registry.register_client(cid, model_type)
 
     def fit(self, parameters, config):
-        #print(f"CLIENT {self.cid} Successfully Configured. Target Model: {self.model_type}", flush=True)
         cpu_start = psutil.cpu_percent(interval=None)
-        
+        compressed_parameters_hex = config.get("compressed_parameters_hex")
+
+        #DECOMPRESSION CODE Server to Client
+        if MessageCompressorServerClient:
+            compressed_parameters = bytes.fromhex(compressed_parameters_hex)
+            decompressed_parameters = pickle.loads(zlib.decompress(compressed_parameters))
+            numpy_arrays = [np.load(BytesIO(tensor)) for tensor in decompressed_parameters.tensors]
+            numpy_arrays = [arr.astype(np.float32) for arr in numpy_arrays]
+
+        parameters = numpy_arrays
+
         set_weights_A(self.net, parameters)
         results, training_time = train_A(self.net, self.trainloader, self.testloader, epochs=1, device=self.device)       
         communication_start_time = time.time()
 
         new_parameters = get_weights_A(self.net)
-        compressed_parameters_hex="x"
 
-        #COMPRESSION CODE
+        #COMPRESSION CODE Client to Server
         if MessageCompressorClientServer:
             serialized_parameters = pickle.dumps(new_parameters)
             compressed_parameters = zlib.compress(serialized_parameters)
@@ -83,7 +94,7 @@ class FlowerClient(NumPyClient):
             "compressed_parameters_hex": compressed_parameters_hex,
         }
 
-        return new_parameters, len(self.trainloader.dataset), metrics
+        return [], len(self.trainloader.dataset), metrics
 
     def evaluate(self, parameters, config):
         print(f"CLIENT {self.cid} ({self.model_type}): Starting evaluation.", flush=True)

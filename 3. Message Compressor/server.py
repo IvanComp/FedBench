@@ -34,10 +34,12 @@ import seaborn as sns
 from APClient import ClientRegistry
 import psutil
 import zlib
+import lz4.frame
+import lz4.block
 import pickle
 
 MessageCompressorClientServer = True
-MessageCompressorServerClient = False
+MessageCompressorServerClient = True
 client_registry = ClientRegistry()
 
 global_metrics = {
@@ -102,6 +104,7 @@ def preprocess_csv():
     import pandas as pd
 
     df = pd.read_csv(csv_file)
+    
     df['Communication Time'] = pd.to_numeric(df['Communication Time'], errors='coerce')
     max_comm_time_b = df[df['Task'] == 'taskB']['Communication Time'].max()
 
@@ -375,16 +378,19 @@ class MultiModelStrategy(Strategy):
         fit_configurations = []
 
         for i, client in enumerate(clients):
-            client_id = client.cid
-            fit_ins = FitIns(self.parameters_a, {})
-            model_type = "taskA"
-            
-            # Map the model to the client
-            client_model_mapping[client_id] = model_type
+                client_id = client.cid
 
-            # Add the configuration
-            fit_configurations.append((client, fit_ins))
-        
+                empty_parameters = np.array([], dtype=np.float32) 
+                serialized_parameters = pickle.dumps(self.parameters_a)
+                compressed_parameters = zlib.compress(serialized_parameters)
+                compressed_parameters_hex = compressed_parameters.hex()
+
+                fit_ins = FitIns(self.parameters_a, {"compressed_parameters_hex": compressed_parameters_hex}) 
+                
+                client_model_mapping[client_id] = "taskA"
+
+                fit_configurations.append((client, fit_ins))
+
         return fit_configurations
 
     def aggregate_fit(
@@ -422,9 +428,17 @@ class MultiModelStrategy(Strategy):
             compressed_parameters_hex = fit_res.metrics.get("compressed_parameters_hex")
 
             if MessageCompressorClientServer:
+                
                 compressed_parameters = bytes.fromhex(compressed_parameters_hex)
+                #CS1 b'x\x9ct\xbay<\x17_\xf4?n\'\x12Y\xb3g\xdfw\x85\xd7\xdcC
+                #print(f"CS 1{compressed_parameters}")
                 decompressed_parameters = pickle.loads(zlib.decompress(compressed_parameters))
+                #CS2 [array([[[[-1.10930584e-01,  5.77214826e-03, -4.26837578e-02, 8.08094591e-02,  4.68723848e-03],
+                #print(f"CS 2{decompressed_parameters}")
                 fit_res.parameters = ndarrays_to_parameters(decompressed_parameters)
+
+                #Ottengo: Parameters(tensors=[b'\x93NUMPY\x01\x00v\x00{\'descr\': \'<f4\', \'fortran_order\': False, \'shape\': (6, 3, 5, 5), }                                                    \n\x12y\x91
+                #print(f"Test aggr: {fit_res.parameters}")
 
             # Continua con la logica di aggregazione
             if fit_res.metrics.get("model_type") == "taskA":
