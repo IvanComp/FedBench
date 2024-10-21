@@ -33,9 +33,11 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from APClient import ClientRegistry
 import psutil
-import lz4.frame
+import zlib
 import pickle
 
+MessageCompressorClientServer = True
+MessageCompressorServerClient = False
 client_registry = ClientRegistry()
 
 global_metrics = {
@@ -48,7 +50,6 @@ current_dir = os.path.abspath(os.path.dirname(__file__))
 
 num_rounds = int(os.getenv("NUM_ROUNDS", 10))
 currentRnd = 0
-
 
 performance_dir = './performance/'
 if not os.path.exists(performance_dir):
@@ -396,8 +397,6 @@ class MultiModelStrategy(Strategy):
         global previous_round_end_time
         aggregation_start_time = time.time()
 
-        #fit_res.parameters = zl4.decompress(fit_res.parameters)
-
         if previous_round_end_time is not None:
             if server_round-1 == 1:
                 time_between_rounds = aggregation_start_time - previous_round_end_time
@@ -420,15 +419,12 @@ class MultiModelStrategy(Strategy):
             model_type = fit_res.metrics.get("model_type")
             training_time = fit_res.metrics.get("training_time")
             communication_start_time = fit_res.metrics.get("communication_start_time") 
+            compressed_parameters_hex = fit_res.metrics.get("compressed_parameters_hex")
 
-            compressed_np = np.frombuffer(fit_res.parameters, dtype=np.uint8)
-            # Step 2: Converti l'array NumPy in bytes
-            compressed_data = compressed_np.tobytes()
-            # Step 3: Decomprimi i dati
-            decompressed_parameters_bytes = lz4.frame.decompress(compressed_data)
-            # Step 4: Deserializza i dati decompressi per ottenere i parametri originali
-            fit_res.parameters = pickle.loads(decompressed_parameters_bytes)
-
+            if MessageCompressorClientServer:
+                compressed_parameters = bytes.fromhex(compressed_parameters_hex)
+                decompressed_parameters = pickle.loads(zlib.decompress(compressed_parameters))
+                fit_res.parameters = ndarrays_to_parameters(decompressed_parameters)
 
             # Continua con la logica di aggregazione
             if fit_res.metrics.get("model_type") == "taskA":

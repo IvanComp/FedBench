@@ -23,10 +23,13 @@ from taskA import (
     train as train_A,
     test as test_A
 )
-import lz4.frame
+import zlib
 import pickle
 import numpy as np
 from APClient import ClientRegistry
+
+MessageCompressorClientServer = True
+MessageCompressorServerClient = False
 
 CLIENT_ID = os.getenv("HOSTNAME")
 
@@ -54,13 +57,14 @@ class FlowerClient(NumPyClient):
         communication_start_time = time.time()
 
         new_parameters = get_weights_A(self.net)
+        compressed_parameters_hex="x"
 
         #COMPRESSION CODE
-        new_parameters_bytes = pickle.dumps(new_parameters)
-        new_parameters_compressed = lz4.frame.compress(new_parameters_bytes)
-        compressed_np = np.frombuffer(new_parameters_compressed, dtype=np.uint8)
-        new_parameters_list = [compressed_np]
-
+        if MessageCompressorClientServer:
+            serialized_parameters = pickle.dumps(new_parameters)
+            compressed_parameters = zlib.compress(serialized_parameters)
+            compressed_parameters_hex = compressed_parameters.hex()        
+        
         cpu_end = psutil.cpu_percent(interval=None)
         cpu_usage = (cpu_start + cpu_end) / 2
 
@@ -76,9 +80,10 @@ class FlowerClient(NumPyClient):
             "client_id": self.cid,
             "model_type": self.model_type,
             "communication_start_time": communication_start_time,
+            "compressed_parameters_hex": compressed_parameters_hex,
         }
 
-        return new_parameters_list, len(self.trainloader.dataset), metrics
+        return new_parameters, len(self.trainloader.dataset), metrics
 
     def evaluate(self, parameters, config):
         print(f"CLIENT {self.cid} ({self.model_type}): Starting evaluation.", flush=True)
