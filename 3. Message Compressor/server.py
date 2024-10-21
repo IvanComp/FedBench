@@ -17,6 +17,7 @@ from flwr.server import (
     ServerAppComponents,
     start_server
 )
+from io import BytesIO
 from flwr.server.strategy import Strategy
 from flwr.server.client_manager import ClientManager
 from flwr.server.client_proxy import ClientProxy
@@ -359,37 +360,58 @@ class MultiModelStrategy(Strategy):
     def initialize_parameters(self, client_manager: ClientManager) -> Optional[Parameters]:
         # Return None because we use separate initial parameters for A and B
         return None
-
+    
     def configure_fit(
-        self,
-        server_round: int,
-        parameters: Parameters,
-        client_manager: ClientManager,
-    ) -> List[Tuple[ClientProxy, FitIns]]:
+            self,
+            server_round: int,
+            parameters: Parameters,
+            client_manager: ClientManager,
+        ) -> List[Tuple[ClientProxy, FitIns]]:
         min_clients = 2
 
-        # Wait until there are enough clients
+        # Attendere che ci siano abbastanza client disponibili
         while client_manager.num_available() < min_clients:
             time.sleep(1)  
 
-        # Sample available clients after reaching the minimum number
+        # Campionare i client disponibili
         clients = client_manager.sample(num_clients=min_clients)
-
         fit_configurations = []
 
-        for i, client in enumerate(clients):
-                client_id = client.cid
+        # Creare parametri finti con la stessa struttura di self.parameters_a
+        fake_tensors = []
+        for tensor in self.parameters_a.tensors:
+            # Caricare l'array reale per ottenere la forma e il dtype
+            buffer = BytesIO(tensor)
+            loaded_array = np.load(buffer)
+            
+            # Creare un array di zeri con la stessa forma e dtype
+            fake_array = np.zeros_like(loaded_array)
+            
+            # Serializzare l'array finto in formato binario
+            fake_serialized = BytesIO()
+            np.save(fake_serialized, fake_array)
+            fake_serialized.seek(0)
+            fake_tensors.append(fake_serialized.read())
 
-                empty_parameters = np.array([], dtype=np.float32) 
-                serialized_parameters = pickle.dumps(self.parameters_a)
-                compressed_parameters = zlib.compress(serialized_parameters)
-                compressed_parameters_hex = compressed_parameters.hex()
+        # Creare l'oggetto Parameters finto
+        fake_parameters = Parameters(tensors=fake_tensors, tensor_type=self.parameters_a.tensor_type)
 
-                fit_ins = FitIns(self.parameters_a, {"compressed_parameters_hex": compressed_parameters_hex}) 
-                
-                client_model_mapping[client_id] = "taskA"
+        print(f"Fake Parameters: {fake_parameters}")
 
-                fit_configurations.append((client, fit_ins))
+        for client in clients:
+            client_id = client.cid               
+
+            # Serializzare e comprimere i parametri reali
+            serialized_parameters = pickle.dumps(self.parameters_a)
+            compressed_parameters = zlib.compress(serialized_parameters)
+            compressed_parameters_hex = compressed_parameters.hex()
+
+            # Creare FitIns con parametri finti e config con parametri compressi
+            fit_ins = FitIns(fake_parameters, {"compressed_parameters_hex": compressed_parameters_hex}) 
+            
+            client_model_mapping[client_id] = "taskA"
+
+            fit_configurations.append((client, fit_ins))
 
         return fit_configurations
 
@@ -427,18 +449,10 @@ class MultiModelStrategy(Strategy):
             communication_start_time = fit_res.metrics.get("communication_start_time") 
             compressed_parameters_hex = fit_res.metrics.get("compressed_parameters_hex")
 
-            if MessageCompressorClientServer:
-                
+            if MessageCompressorClientServer:            
                 compressed_parameters = bytes.fromhex(compressed_parameters_hex)
-                #CS1 b'x\x9ct\xbay<\x17_\xf4?n\'\x12Y\xb3g\xdfw\x85\xd7\xdcC
-                #print(f"CS 1{compressed_parameters}")
                 decompressed_parameters = pickle.loads(zlib.decompress(compressed_parameters))
-                #CS2 [array([[[[-1.10930584e-01,  5.77214826e-03, -4.26837578e-02, 8.08094591e-02,  4.68723848e-03],
-                #print(f"CS 2{decompressed_parameters}")
                 fit_res.parameters = ndarrays_to_parameters(decompressed_parameters)
-
-                #Ottengo: Parameters(tensors=[b'\x93NUMPY\x01\x00v\x00{\'descr\': \'<f4\', \'fortran_order\': False, \'shape\': (6, 3, 5, 5), }                                                    \n\x12y\x91
-                #print(f"Test aggr: {fit_res.parameters}")
 
             # Continua con la logica di aggregazione
             if fit_res.metrics.get("model_type") == "taskA":
