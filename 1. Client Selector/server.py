@@ -342,7 +342,7 @@ class MultiModelStrategy(Strategy):
         parameters: Parameters,
         client_manager: ClientManager,
     ) -> List[Tuple[ClientProxy, FitIns]]:
-        min_clients = 2
+        min_clients = 4
 
         # Wait until there are enough clients
         while client_manager.num_available() < min_clients:
