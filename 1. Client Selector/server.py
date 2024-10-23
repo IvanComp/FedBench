@@ -103,9 +103,6 @@ def preprocess_csv():
     # Assicurati che 'Training Time' sia numerico
     df['Training Time'] = pd.to_numeric(df['Training Time'], errors='coerce')
 
-    # Calcola 'Training Time Max' per ogni FL Round
-    df['Training Time Max'] = df.groupby('FL Round')['Training Time'].transform('max')
-
     # Assicurati che 'Total Time of FL Round' sia numerico
     df['Total Time of FL Round'] = pd.to_numeric(df['Total Time of FL Round'], errors='coerce')
 
@@ -113,14 +110,8 @@ def preprocess_csv():
     # Se 'Total Time of FL Round' è presente solo per alcuni client, usiamo il valore massimo per ogni FL Round
     df['Total Time of FL Round'] = df.groupby('FL Round')['Total Time of FL Round'].transform('max')
 
-    # Calcola 'Communication Time' utilizzando la formula corretta
-    df['Communication Time'] = df['Total Time of FL Round'] - (df['Training Time Max'] - df['Training Time'])
-
     # Calcola 'Total Client Time'
     df['Total Client Time'] = df['Training Time'] + df['Communication Time']
-
-    # Rimuovi la colonna temporanea 'Training Time Max'
-    df.drop(columns=['Training Time Max'], inplace=True)
 
     # Map client IDs per task
     unique_tasks = df['Task'].unique()
@@ -244,7 +235,7 @@ def generate_communication_time_graph():
         
     plt.close()
 
-def weighted_average_global(metrics, task_type, srt1, srt2, time_between_rounds,communication_time):
+def weighted_average_global(metrics, task_type, srt1, srt2, time_between_rounds):
     examples = [num_examples for num_examples, _ in metrics]
     total_examples = sum(examples)
     if total_examples == 0:
@@ -285,7 +276,10 @@ def weighted_average_global(metrics, task_type, srt1, srt2, time_between_rounds,
         model_type = m.get("model_type")
         training_time = m.get("training_time")
         cpu_usage = m.get("cpu_usage")
-        communication_start_time = m.get("communication_start_time")
+        start_comm_time = m.get("start_comm_time")
+
+        communication_time = time.time() - start_comm_time       
+        print(f"comm. time3: {communication_time}")
        
         if client_id:
             if not client_registry.is_registered(client_id):
@@ -348,15 +342,15 @@ class MultiModelStrategy(Strategy):
         parameters: Parameters,
         client_manager: ClientManager,
     ) -> List[Tuple[ClientProxy, FitIns]]:
-        min_clients = 4
+        min_clients = 2
 
         # Wait until there are enough clients
         while client_manager.num_available() < min_clients:
             time.sleep(1)
             log(INFO, f"Starting the Clients Selector...")
-            time.sleep(5)
+            time.sleep(3)
             log(INFO, f"Selection Criteria: CPUs > 1")
-            time.sleep(5)
+            time.sleep(3)
         
         # Sample available clients after reaching the minimum number
         clients = client_manager.sample(num_clients=min_clients)
@@ -382,9 +376,8 @@ class MultiModelStrategy(Strategy):
         results: List[Tuple[ClientProxy, FitRes]],
         failures: List[BaseException],
     ) -> Optional[Tuple[Parameters, Dict[str, Scalar]]]:
-        
+
         global previous_round_end_time
-        
 
         if previous_round_end_time is not None:
             if server_round-1 == 1:
@@ -407,7 +400,6 @@ class MultiModelStrategy(Strategy):
             model_type = fit_res.metrics.get("model_type")
             training_time = fit_res.metrics.get("training_time")
             n_cpu = fit_res.metrics.get("n_cpu")
-            communication_start_time = fit_res.metrics.get("communication_start_time") 
 
             client_model_mapping[client_id] = model_type
 
@@ -419,13 +411,12 @@ class MultiModelStrategy(Strategy):
             else:
                 continue
 
-        communication_time = time.time() - communication_start_time
         previous_round_end_time = time.time()
 
         # Aggrega i parametri per taskA
         if results_a:
             srt1 = max(training_times)
-            self.parameters_a = self.aggregate_parameters(results_a, "taskA", srt1, srt2, time_between_rounds,communication_time)
+            self.parameters_a = self.aggregate_parameters(results_a, "taskA", srt1, srt2, time_between_rounds)
  
         metrics_aggregated = {
             "taskA": {
@@ -450,7 +441,7 @@ class MultiModelStrategy(Strategy):
 
         return (self.parameters_a), metrics_aggregated
 
-    def aggregate_parameters(self, results, task_type, srt1, srt2,time_between_rounds,communication_time):
+    def aggregate_parameters(self, results, task_type, srt1, srt2,time_between_rounds):
         # Aggregate weights using weighted average based on number of examples
         total_examples = sum([num_examples for _, num_examples, _ in results])
         new_weights = None
@@ -467,7 +458,7 @@ class MultiModelStrategy(Strategy):
             metrics.append((num_examples, client_metrics))
 
         # Aggregate metrics
-        weighted_average_global(metrics, task_type, srt1, srt2, time_between_rounds,communication_time)
+        weighted_average_global(metrics, task_type, srt1, srt2, time_between_rounds)
 
         return ndarrays_to_parameters(new_weights)
     

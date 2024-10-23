@@ -50,8 +50,7 @@ class FlowerClient(NumPyClient):
 
         n_cpu = query_cpu()        
         set_weights_A(self.net, parameters)
-        results, training_time = train_A(self.net, self.trainloader, self.testloader, epochs=1, device=self.device)       
-        communication_start_time = time.time()
+        results, training_time, start_comm_time = train_A(self.net, self.trainloader, self.testloader, epochs=1, device=self.device)       
 
         new_parameters = get_weights_A(self.net)
 
@@ -69,7 +68,7 @@ class FlowerClient(NumPyClient):
             "n_cpu": n_cpu,
             "client_id": self.cid,
             "model_type": self.model_type,
-            "communication_start_time": communication_start_time,
+            "start_comm_time": start_comm_time,
         }
 
         return new_parameters, len(self.trainloader.dataset), metrics
