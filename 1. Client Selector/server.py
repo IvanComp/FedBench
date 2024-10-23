@@ -97,16 +97,30 @@ def log_round_time(client_id, fl_round, training_time, communication_time, total
 def preprocess_csv():
     import pandas as pd
 
+    # Leggi il CSV esistente
     df = pd.read_csv(csv_file)
-    df['Communication Time'] = pd.to_numeric(df['Communication Time'], errors='coerce')
-    max_comm_time_b = df[df['Task'] == 'taskB']['Communication Time'].max()
 
-    if pd.isna(max_comm_time_b):
-        pass
-    else:
-        df.loc[df['Task'] == 'taskA', 'Communication Time'] = df.loc[df['Task'] == 'taskA', 'Communication Time'] - max_comm_time_b
-        df['Communication Time'] = df['Communication Time'].clip(lower=0)
-        df.loc[df['Task'] == 'taskA', 'Total Client Time'] = df.loc[df['Task'] == 'taskA', 'Training Time'] + df.loc[df['Task'] == 'taskA', 'Communication Time']
+    # Assicurati che 'Training Time' sia numerico
+    df['Training Time'] = pd.to_numeric(df['Training Time'], errors='coerce')
+
+    # Calcola 'Training Time Max' per ogni FL Round
+    df['Training Time Max'] = df.groupby('FL Round')['Training Time'].transform('max')
+
+    # Assicurati che 'Total Time of FL Round' sia numerico
+    df['Total Time of FL Round'] = pd.to_numeric(df['Total Time of FL Round'], errors='coerce')
+
+    # Propaga 'Total Time of FL Round' a tutti i client nel loro FL Round
+    # Se 'Total Time of FL Round' è presente solo per alcuni client, usiamo il valore massimo per ogni FL Round
+    df['Total Time of FL Round'] = df.groupby('FL Round')['Total Time of FL Round'].transform('max')
+
+    # Calcola 'Communication Time' utilizzando la formula corretta
+    df['Communication Time'] = df['Total Time of FL Round'] - (df['Training Time Max'] - df['Training Time'])
+
+    # Calcola 'Total Client Time'
+    df['Total Client Time'] = df['Training Time'] + df['Communication Time']
+
+    # Rimuovi la colonna temporanea 'Training Time Max'
+    df.drop(columns=['Training Time Max'], inplace=True)
 
     # Map client IDs per task
     unique_tasks = df['Task'].unique()
@@ -120,17 +134,18 @@ def preprocess_csv():
 
     df['Client ID'] = df['Client ID'].map(client_mappings)
 
-    # Extract client number for sorting
+    # Estrai il numero del client per l'ordinamento
     df['Client Number'] = df['Client ID'].str.extract(r'Client (\d+)').astype(int)
 
-    # Ensure 'Task' is ordered with 'taskA' before 'taskB'
+    # Ordina 'Task' con 'taskA' prima di 'taskB'
     task_order = ['taskA', 'taskB']
     df['Task'] = pd.Categorical(df['Task'], categories=task_order, ordered=True)
 
-    # Sort the DataFrame
+    # Ordina il DataFrame
     df.sort_values(by=['FL Round', 'Task', 'Client Number'], inplace=True)
-    df.drop(columns=['Client Number'], inplace=True)  # Remove helper column
+    df.drop(columns=['Client Number'], inplace=True)  # Rimuovi la colonna di supporto
 
+    # Salva il DataFrame aggiornato nel CSV
     df.to_csv(csv_file, index=False)
 
 # Update graph generation functions to accommodate new Client IDs
@@ -229,7 +244,7 @@ def generate_communication_time_graph():
         
     plt.close()
 
-def weighted_average_global(metrics, task_type, srt1, srt2, time_between_rounds):
+def weighted_average_global(metrics, task_type, srt1, srt2, time_between_rounds,communication_time):
     examples = [num_examples for num_examples, _ in metrics]
     total_examples = sum(examples)
     if total_examples == 0:
@@ -276,8 +291,7 @@ def weighted_average_global(metrics, task_type, srt1, srt2, time_between_rounds)
             if not client_registry.is_registered(client_id):
                 client_registry.register_client(client_id, model_type)
           
-            srt2 = time_between_rounds
-            communication_time = srt2 - training_time
+            srt2 = time_between_rounds           
             total_time = training_time + communication_time
             client_data_list.append((client_id, training_time, communication_time, total_time, cpu_usage, model_type, srt1, srt2))
 
@@ -370,14 +384,14 @@ class MultiModelStrategy(Strategy):
     ) -> Optional[Tuple[Parameters, Dict[str, Scalar]]]:
         
         global previous_round_end_time
-        aggregation_start_time = time.time()
+        
 
         if previous_round_end_time is not None:
             if server_round-1 == 1:
-                time_between_rounds = aggregation_start_time - previous_round_end_time
+                time_between_rounds = time.time() - previous_round_end_time
                 log(INFO, f"Results Aggregated in {time_between_rounds:.2f} seconds.")
             else:
-                time_between_rounds = aggregation_start_time - previous_round_end_time
+                time_between_rounds = time.time() - previous_round_end_time
                 log(INFO, f"Results Aggregated in {time_between_rounds:.2f} seconds")
      
         results_a = []
@@ -405,12 +419,13 @@ class MultiModelStrategy(Strategy):
             else:
                 continue
 
+        communication_time = time.time() - communication_start_time
         previous_round_end_time = time.time()
 
         # Aggrega i parametri per taskA
         if results_a:
             srt1 = max(training_times)
-            self.parameters_a = self.aggregate_parameters(results_a, "taskA", srt1, srt2, time_between_rounds)
+            self.parameters_a = self.aggregate_parameters(results_a, "taskA", srt1, srt2, time_between_rounds,communication_time)
  
         metrics_aggregated = {
             "taskA": {
@@ -435,7 +450,7 @@ class MultiModelStrategy(Strategy):
 
         return (self.parameters_a), metrics_aggregated
 
-    def aggregate_parameters(self, results, task_type, srt1, srt2,time_between_rounds):
+    def aggregate_parameters(self, results, task_type, srt1, srt2,time_between_rounds,communication_time):
         # Aggregate weights using weighted average based on number of examples
         total_examples = sum([num_examples for _, num_examples, _ in results])
         new_weights = None
@@ -452,7 +467,7 @@ class MultiModelStrategy(Strategy):
             metrics.append((num_examples, client_metrics))
 
         # Aggregate metrics
-        weighted_average_global(metrics, task_type, srt1, srt2, time_between_rounds)
+        weighted_average_global(metrics, task_type, srt1, srt2, time_between_rounds,communication_time)
 
         return ndarrays_to_parameters(new_weights)
     

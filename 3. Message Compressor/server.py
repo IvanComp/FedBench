@@ -308,7 +308,7 @@ def weighted_average_global(metrics, task_type, srt1, srt2, time_between_rounds)
                 client_registry.register_client(client_id, model_type)
           
             srt2 = time_between_rounds
-            communication_time = srt2 - training_time
+            communication_time = previous_round_end_time - communication_start_time 
             total_time = training_time + communication_time
             client_data_list.append((client_id, training_time, communication_time, total_time, cpu_usage, model_type, srt1, srt2))
 
@@ -345,7 +345,7 @@ def print_results():
     print(f"  Train F1: {global_metrics['taskA']['train_f1']}")
     print(f"  Val loss: {global_metrics['taskA']['val_loss']}")
     print(f"  Val accuracy: {global_metrics['taskA']['val_accuracy']}")
-    print(f"  Val F1: {global_metrics['taskA']['val_f1']}")
+    print(f"  Val F1: {global_metrics['taskA']['val_f1']}\n")
 
 # Initialize the client_model_mapping dictionary
 client_model_mapping = {}

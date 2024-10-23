@@ -38,7 +38,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '3'
+          cpus: '2'
     command: sh -c "sleep 2 && python clientahigh.py"
 
   clientalow:
@@ -55,7 +55,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.5'
+          cpus: '1'
     command: sh -c "sleep 2 && python clientalow.py"
 
 networks:
