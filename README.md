@@ -1,7 +1,7 @@
 # FedBench
 
 <p align="center">
-<img src="img/ArchitectureEval.png" width="550px" height="300px"/>
+<img src="img/ArchitectureEval.png" width="400px" height="300px"/>
 </p>
 
 FedBench is a Federated Learning Platform for testing the performance of a Federated Learning system applying custom specifications.
