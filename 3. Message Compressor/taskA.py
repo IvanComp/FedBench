@@ -61,6 +61,7 @@ def train(net, trainloader, valloader, epochs, device):
     # End measuring training time
     training_time = time.time() - start_time
     log(INFO, f"Training completed in {training_time:.2f} seconds")
+    start_comm_time = time.time()
 
     train_loss, train_acc, train_f1 = test(net, trainloader)
     val_loss, val_acc, val_f1 = test(net, valloader)
@@ -74,7 +75,7 @@ def train(net, trainloader, valloader, epochs, device):
         "val_f1": val_f1,
     }
 
-    return results, training_time
+    return results, training_time, start_comm_time
 
 def test(net, testloader):
     net.to(DEVICE)

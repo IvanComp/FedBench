@@ -104,17 +104,21 @@ def log_round_time(client_id, fl_round, training_time, communication_time, total
 def preprocess_csv():
     import pandas as pd
 
+    # Leggi il CSV esistente
     df = pd.read_csv(csv_file)
-    
-    df['Communication Time'] = pd.to_numeric(df['Communication Time'], errors='coerce')
-    max_comm_time_b = df[df['Task'] == 'taskB']['Communication Time'].max()
 
-    if pd.isna(max_comm_time_b):
-        pass
-    else:
-        df.loc[df['Task'] == 'taskA', 'Communication Time'] = df.loc[df['Task'] == 'taskA', 'Communication Time'] - max_comm_time_b
-        df['Communication Time'] = df['Communication Time'].clip(lower=0)
-        df.loc[df['Task'] == 'taskA', 'Total Client Time'] = df.loc[df['Task'] == 'taskA', 'Training Time'] + df.loc[df['Task'] == 'taskA', 'Communication Time']
+    # Assicurati che 'Training Time' sia numerico
+    df['Training Time'] = pd.to_numeric(df['Training Time'], errors='coerce')
+
+    # Assicurati che 'Total Time of FL Round' sia numerico
+    df['Total Time of FL Round'] = pd.to_numeric(df['Total Time of FL Round'], errors='coerce')
+
+    # Propaga 'Total Time of FL Round' a tutti i client nel loro FL Round
+    # Se 'Total Time of FL Round' è presente solo per alcuni client, usiamo il valore massimo per ogni FL Round
+    df['Total Time of FL Round'] = df.groupby('FL Round')['Total Time of FL Round'].transform('max')
+
+    # Calcola 'Total Client Time'
+    df['Total Client Time'] = df['Training Time'] + df['Communication Time']
 
     # Map client IDs per task
     unique_tasks = df['Task'].unique()
@@ -128,17 +132,18 @@ def preprocess_csv():
 
     df['Client ID'] = df['Client ID'].map(client_mappings)
 
-    # Extract client number for sorting
+    # Estrai il numero del client per l'ordinamento
     df['Client Number'] = df['Client ID'].str.extract(r'Client (\d+)').astype(int)
 
-    # Ensure 'Task' is ordered with 'taskA' before 'taskB'
+    # Ordina 'Task' con 'taskA' prima di 'taskB'
     task_order = ['taskA', 'taskB']
     df['Task'] = pd.Categorical(df['Task'], categories=task_order, ordered=True)
 
-    # Sort the DataFrame
+    # Ordina il DataFrame
     df.sort_values(by=['FL Round', 'Task', 'Client Number'], inplace=True)
-    df.drop(columns=['Client Number'], inplace=True)  # Remove helper column
+    df.drop(columns=['Client Number'], inplace=True)  # Rimuovi la colonna di supporto
 
+    # Salva il DataFrame aggiornato nel CSV
     df.to_csv(csv_file, index=False)
 
 # Update graph generation functions to accommodate new Client IDs
@@ -301,14 +306,15 @@ def weighted_average_global(metrics, task_type, srt1, srt2, time_between_rounds)
         model_type = m.get("model_type")
         training_time = m.get("training_time")
         cpu_usage = m.get("cpu_usage")
-        communication_start_time = m.get("communication_start_time")
+        start_comm_time = m.get("start_comm_time")
+
+        communication_time = time.time() - start_comm_time       
        
         if client_id:
             if not client_registry.is_registered(client_id):
                 client_registry.register_client(client_id, model_type)
           
             srt2 = time_between_rounds
-            communication_time = previous_round_end_time - communication_start_time 
             total_time = training_time + communication_time
             client_data_list.append((client_id, training_time, communication_time, total_time, cpu_usage, model_type, srt1, srt2))
 
@@ -349,7 +355,6 @@ def print_results():
 
 # Initialize the client_model_mapping dictionary
 client_model_mapping = {}
-
 previous_round_end_time = time.time() 
 
 # Definition of the custom strategy
@@ -413,14 +418,13 @@ class MultiModelStrategy(Strategy):
     ) -> Optional[Tuple[Parameters, Dict[str, Scalar]]]:
         from logging import INFO       
         global previous_round_end_time
-        aggregation_start_time = time.time()
 
         if previous_round_end_time is not None:
             if server_round-1 == 1:
-                time_between_rounds = aggregation_start_time - previous_round_end_time
+                time_between_rounds = time.time() - previous_round_end_time
                 log(INFO, f"Results Aggregated in {time_between_rounds:.2f} seconds.")
             else:
-                time_between_rounds = aggregation_start_time - previous_round_end_time
+                time_between_rounds = time.time() - previous_round_end_time
                 log(INFO, f"Results Aggregated in {time_between_rounds:.2f} seconds")
      
         results_a = []
@@ -436,24 +440,22 @@ class MultiModelStrategy(Strategy):
             client_id = fit_res.metrics.get("client_id")
             model_type = fit_res.metrics.get("model_type")
             training_time = fit_res.metrics.get("training_time")
-            communication_start_time = fit_res.metrics.get("communication_start_time") 
             compressed_parameters_hex = fit_res.metrics.get("compressed_parameters_hex")
+
+            client_model_mapping[client_id] = model_type
 
             if MessageCompressorClientServer:            
                 compressed_parameters = bytes.fromhex(compressed_parameters_hex)
                 decompressed_parameters = pickle.loads(zlib.decompress(compressed_parameters))
                 fit_res.parameters = ndarrays_to_parameters(decompressed_parameters)
 
-            if fit_res.metrics.get("model_type") == "taskA":
-                results_a.append((fit_res.parameters, fit_res.num_examples, fit_res.metrics))
-
-            client_model_mapping[client_id] = model_type
-
             if training_time is not None:
-                training_times.append(training_time)              
+                training_times.append(training_time) 
 
             if model_type == "taskA":
                 results_a.append((fit_res.parameters, fit_res.num_examples, fit_res.metrics))
+            else:
+                continue
 
         previous_round_end_time = time.time()
 
@@ -469,6 +471,8 @@ class MultiModelStrategy(Strategy):
                 "val_accuracy": global_metrics["taskA"]["val_accuracy"][-1] if global_metrics["taskA"]["val_accuracy"] else None,
             },
         }
+
+        print_results()
 
         if currentRnd == num_rounds:
             preprocess_csv()

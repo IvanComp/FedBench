@@ -406,7 +406,7 @@ class MultiModelStrategy(Strategy):
             if training_time is not None:
                 training_times.append(training_time)              
 
-            if model_type == "taskA" and n_cpu > 1:
+            if model_type == "taskA" and n_cpu > 0:
                 results_a.append((fit_res.parameters, fit_res.num_examples, fit_res.metrics))
             else:
                 continue

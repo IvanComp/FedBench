@@ -49,13 +49,13 @@ class FlowerClient(NumPyClient):
         #print(f"CLIENT {self.cid} Successfully Configured. Target Model: {self.model_type}", flush=True)
         n_cpu = query_cpu()
 
-        if n_cpu < 2:
+        if n_cpu < 1:
             log(INFO, f"Client {self.cid} has fewer than 2 CPUs ({n_cpu}). It will not participate in the FL round.")
             log(INFO, f"Preparing empty reply")
             return parameters, 0, {} 
         
         set_weights_A(self.net, parameters)
-        results, training_time = train_A(self.net, self.trainloader, self.testloader, epochs=1, device=self.device)       
+        results, training_time, start_comm_time = train_A(self.net, self.trainloader, self.testloader, epochs=1, device=self.device)       
         communication_start_time = time.time()
 
         new_parameters = get_weights_A(self.net)
@@ -75,6 +75,7 @@ class FlowerClient(NumPyClient):
             "n_cpu": n_cpu,
             "client_id": self.cid,
             "model_type": self.model_type,
+            "start_comm_time": start_comm_time,
             "communication_start_time": communication_start_time,
         }
 
