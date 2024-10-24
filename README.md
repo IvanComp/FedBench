@@ -9,11 +9,13 @@ FedBench is developed extending [Flower](https://github.com/adap/flower) a Feder
 
 The Flower framework was extended by adding 3 different Architectural Patterns for Clients Management [1]:
 
-- 1 Client Selector.
+- 1 Client Registry.
 
-- 2 Client Clustering.
+- 2 Client Selector.
 
-- 3 Message Compressor.
+- 3 Client Clustering.
+
+- 4 Message Compressor.
 
 # Table of contents
 <!--ts-->
@@ -44,38 +46,38 @@ It's possible to run the framework in two ways.
 
 # Client Selector
 
-In the target with 'docker-compose' file, enter the following command:
+In the __1. Client Selector/__ folder with 'docker-compose' file, enter the following command:
 
 ```bash
 #Build Docker images
 docker compose build
 
-#Launch Docker images (Server, 2 Clients A with 2 CPU, 2 Client A with 1 CPU, Prometheus, Grafana)
-NUM_ROUNDS=2 docker-compose up --scale clientahigh=2 --scale clientalow=2
+#Launch Docker images (Server, 2 Clients A with "High" specifications, 2 Client A with "Low" specifications
+NUM_ROUNDS=10 docker-compose up --scale clientahigh=2 --scale clientalow=2
 ```
 
 # Client Clustering
 
-In the target with 'docker-compose' file, enter the following command:
+In the __2. Client Clustering/__ folder with 'docker-compose' file, enter the following command:
 
 ```bash
 #Build Docker images
 docker compose build
 
-#Launch Docker images (Server, 2 Clients A, 2 Clients B, Prometheus, Grafana)
-NUM_ROUNDS=2 docker-compose up --scale clienta=2 --scale clientb=2
+#Launch Docker images (Server, 2 Clients A, 2 Clients B)
+NUM_ROUNDS=10 docker-compose up --scale clienta=2 --scale clientb=2
 ```
 
 # Message Compressor
 
-In the target with 'docker-compose' file, enter the following command:
+In the __3. Message Compressor/__ folder with 'docker-compose' file, enter the following command:
 
 ```bash
 #Build Docker images
 docker compose build
 
-#Launch Docker images (Server, 3 Client A, 3 Client B, Prometheus, Grafana)
-
+#Launch Docker images (Server, 5 Client)
+NUM_ROUNDS=10 docker-compose up --scale client=5
 ```
 
 ## To run the Simulation Locally:
@@ -91,7 +93,7 @@ Change the number of clients by modifying the value of the "--num-supernodes" va
 # Performance
 
 FedBench allows to generate a set of performance benchmarks (graphs) derived from the execution.
-They are automatically stored in the /performance folder.
+They are automatically stored in the _/performance_ folder.
 
 # References
 
