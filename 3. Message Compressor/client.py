@@ -26,8 +26,6 @@ from taskA import (
     test as test_A
 )
 import zlib
-import lz4.frame
-import lz4.block
 import pickle
 import numpy as np
 from APClient import ClientRegistry
@@ -62,19 +60,26 @@ class FlowerClient(NumPyClient):
             decompressed_parameters = pickle.loads(zlib.decompress(compressed_parameters))
             numpy_arrays = [np.load(BytesIO(tensor)) for tensor in decompressed_parameters.tensors]
             numpy_arrays = [arr.astype(np.float32) for arr in numpy_arrays]
-
+            
         parameters = numpy_arrays
 
         set_weights_A(self.net, parameters)
         results, training_time, start_comm_time = train_A(self.net, self.trainloader, self.testloader, epochs=1, device=self.device)       
 
         new_parameters = get_weights_A(self.net)
+        compressed_parameters_hex = None
 
         #COMPRESSION CODE Client to Server
         if MessageCompressorClientServer:
             serialized_parameters = pickle.dumps(new_parameters)
+            original_size = len(serialized_parameters)  
             compressed_parameters = zlib.compress(serialized_parameters)
-            compressed_parameters_hex = compressed_parameters.hex()        
+            compressed_size = len(compressed_parameters)  
+            compressed_parameters_hex = compressed_parameters.hex()
+            reduction_bytes = original_size - compressed_size
+            reduction_percentage = (reduction_bytes / original_size) * 100
+
+            print(f"Compression from Client to Server: reduction of {reduction_bytes} bytes, {reduction_percentage:.2f}%")
         
         cpu_end = psutil.cpu_percent(interval=None)
         cpu_usage = (cpu_start + cpu_end) / 2
@@ -94,7 +99,10 @@ class FlowerClient(NumPyClient):
             "compressed_parameters_hex": compressed_parameters_hex,
         }
 
-        return [], len(self.trainloader.dataset), metrics
+        if MessageCompressorClientServer:
+            return [], len(self.trainloader.dataset), metrics
+        else:
+            return new_parameters, len(self.trainloader.dataset), metrics
 
     def evaluate(self, parameters, config):
         print(f"CLIENT {self.cid} ({self.model_type}): Starting evaluation.", flush=True)

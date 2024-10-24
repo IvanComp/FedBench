@@ -35,8 +35,6 @@ import seaborn as sns
 from APClient import ClientRegistry
 import psutil
 import zlib
-import lz4.frame
-import lz4.block
 import pickle
 
 MessageCompressorClientServer = True
@@ -372,40 +370,50 @@ class MultiModelStrategy(Strategy):
             parameters: Parameters,
             client_manager: ClientManager,
         ) -> List[Tuple[ClientProxy, FitIns]]:
-        min_clients = 2
+        min_clients = 5
 
-        while client_manager.num_available() < min_clients:
-            time.sleep(1)  
+        client_manager.wait_for(min_clients)
+        #while client_manager.num_available() < min_clients:
+         #   time.sleep(1)  
 
         clients = client_manager.sample(num_clients=min_clients)
         fit_configurations = []
 
-        fake_tensors = []
-        for tensor in self.parameters_a.tensors:
-            buffer = BytesIO(tensor)
-            loaded_array = np.load(buffer)
-            
-            reduced_shape = tuple(max(dim // 10, 1) for dim in loaded_array.shape)
-            fake_array = np.zeros(reduced_shape, dtype=loaded_array.dtype)
-            
-            fake_serialized = BytesIO()
-            np.save(fake_serialized, fake_array)
-            fake_serialized.seek(0)
-            fake_tensors.append(fake_serialized.read())
+        if MessageCompressorServerClient:
+            fake_tensors = []
+            for tensor in self.parameters_a.tensors:
+                buffer = BytesIO(tensor)
+                loaded_array = np.load(buffer)
+                
+                reduced_shape = tuple(max(dim // 10, 1) for dim in loaded_array.shape)
+                fake_array = np.zeros(reduced_shape, dtype=loaded_array.dtype)
+                
+                fake_serialized = BytesIO()
+                np.save(fake_serialized, fake_array)
+                fake_serialized.seek(0)
+                fake_tensors.append(fake_serialized.read())
 
-        fake_parameters = Parameters(tensors=fake_tensors, tensor_type=self.parameters_a.tensor_type)
-
-        for client in clients:
-            client_id = client.cid               
+            fake_parameters = Parameters(tensors=fake_tensors, tensor_type=self.parameters_a.tensor_type)
 
             serialized_parameters = pickle.dumps(self.parameters_a)
+            original_size = len(serialized_parameters)  
             compressed_parameters = zlib.compress(serialized_parameters)
+            compressed_size = len(compressed_parameters) 
             compressed_parameters_hex = compressed_parameters.hex()
 
-            fit_ins = FitIns(fake_parameters, {"compressed_parameters_hex": compressed_parameters_hex}) 
-            
-            client_model_mapping[client_id] = "taskA"
+            reduction_bytes = original_size - compressed_size
+            reduction_percentage = (reduction_bytes / original_size) * 100
 
+            print(f"Compression from Server to Client: reduction of {reduction_bytes} bytes, {reduction_percentage:.2f}%")
+
+        for client in clients:
+            client_id = client.cid                          
+            client_model_mapping[client_id] = "taskA"
+            if MessageCompressorServerClient:
+                fit_ins = FitIns(fake_parameters, {"compressed_parameters_hex": compressed_parameters_hex})
+            else:
+                fit_ins = FitIns(self.parameters_a, {})
+        
             fit_configurations.append((client, fit_ins))
 
         return fit_configurations
@@ -467,8 +475,10 @@ class MultiModelStrategy(Strategy):
             "taskA": {
                 "train_loss": global_metrics["taskA"]["train_loss"][-1] if global_metrics["taskA"]["train_loss"] else None,
                 "train_accuracy": global_metrics["taskA"]["train_accuracy"][-1] if global_metrics["taskA"]["train_accuracy"] else None,
+                "train_f1": global_metrics["taskA"]["train_f1"][-1] if global_metrics["taskA"]["train_f1"] else None,
                 "val_loss": global_metrics["taskA"]["val_loss"][-1] if global_metrics["taskA"]["val_loss"] else None,
                 "val_accuracy": global_metrics["taskA"]["val_accuracy"][-1] if global_metrics["taskA"]["val_accuracy"] else None,
+                "val_f1": global_metrics["taskA"]["val_f1"][-1] if global_metrics["taskA"]["val_f1"] else None,
             },
         }
 
