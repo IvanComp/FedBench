@@ -372,9 +372,7 @@ class MultiModelStrategy(Strategy):
         ) -> List[Tuple[ClientProxy, FitIns]]:
         min_clients = 5
 
-        client_manager.wait_for(min_clients)
-        #while client_manager.num_available() < min_clients:
-         #   time.sleep(1)  
+        client_manager.wait_for(min_clients) 
 
         clients = client_manager.sample(num_clients=min_clients)
         fit_configurations = []

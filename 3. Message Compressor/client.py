@@ -53,6 +53,7 @@ class FlowerClient(NumPyClient):
     def fit(self, parameters, config):
         cpu_start = psutil.cpu_percent(interval=None)
         compressed_parameters_hex = config.get("compressed_parameters_hex")
+        numpy_arrays = None
 
         #DECOMPRESSION CODE Server to Client
         if MessageCompressorServerClient:
@@ -60,9 +61,8 @@ class FlowerClient(NumPyClient):
             decompressed_parameters = pickle.loads(zlib.decompress(compressed_parameters))
             numpy_arrays = [np.load(BytesIO(tensor)) for tensor in decompressed_parameters.tensors]
             numpy_arrays = [arr.astype(np.float32) for arr in numpy_arrays]
+            parameters = numpy_arrays
             
-        parameters = numpy_arrays
-
         set_weights_A(self.net, parameters)
         results, training_time, start_comm_time = train_A(self.net, self.trainloader, self.testloader, epochs=1, device=self.device)       
 

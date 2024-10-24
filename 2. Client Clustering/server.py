@@ -376,9 +376,7 @@ class MultiModelStrategy(Strategy):
     ) -> List[Tuple[ClientProxy, FitIns]]:
         min_clients = 4
 
-        # Wait until there are enough clients
-        while client_manager.num_available() < min_clients:
-            time.sleep(1)  
+        client_manager.wait_for(min_clients) 
 
         # Sample available clients after reaching the minimum number
         clients = client_manager.sample(num_clients=min_clients)
