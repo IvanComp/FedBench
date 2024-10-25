@@ -16,21 +16,20 @@ class Net(nn.Module):
 
     def __init__(self) -> None:
         super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(3, 12, 5)  
+        self.conv1 = nn.Conv2d(3, 3, 5)  
         self.pool = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(12, 32, 5)  
-        self.fc1 = nn.Linear(32 * 5 * 5, 240)  
-        self.fc2 = nn.Linear(240, 168)  
-        self.fc3 = nn.Linear(168, 10)  
+        self.conv2 = nn.Conv2d(3, 8, 5)  
+        self.fc1 = nn.Linear(8 * 5 * 5, 60)  
+        self.fc2 = nn.Linear(60, 42)  
+        self.fc3 = nn.Linear(42, 10)  
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
-        x = x.view(-1, 32 * 5 * 5)
+        x = x.view(-1, 8 * 5 * 5)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         return self.fc3(x)
-
 
 def load_data():
     """Load CIFAR-10 (training and test set)."""
