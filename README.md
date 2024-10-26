@@ -30,19 +30,18 @@ FedBench allows you to
 
 # How To Run:
 
-It's possible to run the framework in two ways. 
+FedBench allows to run a Federated Learning project in two different ways:
 
-- Locally (creating virtual local images of clients and serves)
+- Locally (creating virtual local images of clients and server)
 
-- Distributed (creating container images of clients and serves)
+- Distributed (creating container images of clients and server)
 
+# Experiments
 
-# Functionalities
-
-This section propose the replication package of the experiments for the paper titled "Performance Analysis of Architectural Patterns
+This section proposes the replication package of the experiments for the paper titled "Performance Analysis of Architectural Patterns
 for Federated Learning Systems" for the IEEE International Conference on Software Architecture (ICSA 2024).
 
-## To run the Simulation on Docker containers:
+## To run the Framework on Docker containers:
 
 # Client Selector
 
@@ -80,31 +79,23 @@ docker compose build
 NUM_ROUNDS=10 docker-compose up --scale client=5
 ```
 
-## To run the Simulation Locally:
-
-In the target folder, enter the following command:
-
-```bash
-flower-simulation --server-app server:app --client-app client:app --num-supernodes 2 
-```
-Change the number of clients by modifying the value of the "--num-supernodes" variable.
-
 # Architectural Patterns
 
-The Flower framework was extended by adding 4 Architectural Patterns proposed in [1]:
+FedBench extends the Flower framework by adding 4 Architectural Patterns proposed in [1]:
 
-- 1 Client Registry.
-
-- 2 Client Selector.
-
-- 3 Client Clustering.
-
-- 4 Message Compressor.
+| Architectural Pattern | Pattern Category | Description |
+| --- | --- | --- | 
+| **Client Registry** | `Client Management` | TODO |
+| **Client Selector** | `Client Management` | TODO |
+| **Client Clustering** | `Client Management` | TODO |
+| **Message Compressor** | `Model Management` | TODO |
 
 # Performance
 
-FedBench allows to generate a set of performance benchmarks (graphs) derived from the execution.
-They are automatically stored in the _/performance_ folder.
+FedBench allows to generation of a set of performance benchmarks (graphs) derived from the execution.
+They are automatically stored in the _/performance_ folder. Below you can find some examples.
+
+
 
 # References
 
