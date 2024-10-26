@@ -7,7 +7,8 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.12671621.svg)](https://doi.org/10.5281/zenodo.12671621)
 
 
-FedBench is a Federated Learning platform built on top of the [Flower](https://github.com/adap/flower) framework, enhanced with architectural patterns to optimize system performance and extended monitoring capabilities for performance evaluation.
+FedBench is a Federated Learning platform built on top of the [Flower](https://github.com/adap/flower) an open-source Python library that simplifies building Federated Learning systems.
+FedBench is a Federated Learning framework enhanced with architectural patterns and extended monitoring capabilities for performance evaluation.
 
 # Table of contents
 <!--ts-->
