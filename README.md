@@ -4,8 +4,7 @@
 <img src="img/ArchitectureEval.png" width="420px" height="300px"/>
 </p>
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13121149.svg)](https://zenodo.org/badge/latestdoi/{IvanComp})
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13121149.svg)](https://doi.org/10.5281/zenodo.13121149)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.12671621.svg)](https://doi.org/10.5281/zenodo.12671621)
 
 FedBench is a Federated Learning Platform for testing the performance of a Federated Learning system applying custom specifications.
 FedBench is developed extending [Flower](https://github.com/adap/flower) a Federated Learning Framework. 
