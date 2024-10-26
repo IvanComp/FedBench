@@ -41,9 +41,9 @@ docker compose build
 NUM_ROUNDS=10 docker-compose up --scale clientahigh=2 --scale clientalow=2
 ```
 
-# Client Clustering
+# Client Cluster
 
-In the __2. Client Clustering/__ folder with 'docker-compose' file, enter the following command:
+In the __2. Client Cluster/__ folder with 'docker-compose' file, enter the following command:
 
 ```bash
 #Build Docker images
@@ -85,7 +85,7 @@ FedBench extends the Flower framework by adding 4 Architectural Patterns propose
 | --- | --- | --- | 
 | **Client Registry** | `Client Management` | TODO |
 | **Client Selector** | `Client Management` | TODO |
-| **Client Clustering** | `Client Management` | TODO |
+| **Client Cluster** | `Client Management` | TODO |
 | **Message Compressor** | `Model Management` | TODO |
 
 # Performance
