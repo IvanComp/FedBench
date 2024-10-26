@@ -6,24 +6,15 @@
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.12671621.svg)](https://doi.org/10.5281/zenodo.12671621)
 
-FedBench is a Federated Learning Platform for testing the performance of a Federated Learning system applying custom specifications.
-FedBench is developed extending [Flower](https://github.com/adap/flower) a Federated Learning Framework. 
 
-The Flower framework was extended by adding 4 Architectural Patterns proposed in [1]:
-
-- 1 Client Registry.
-
-- 2 Client Selector.
-
-- 3 Client Clustering.
-
-- 4 Message Compressor.
+FedBench is a Federated Learning platform built on top of the [Flower](https://github.com/adap/flower) framework, enhanced with architectural patterns to optimize system performance and extended monitoring capabilities for performance evaluation.
 
 # Table of contents
 <!--ts-->
    * [Functionalities](#functionalities)
    * [How to run](#how-to-run)
    * [Experiments](#experiments)
+   * [Architectural Patterns](#architecturalpatterns)
    * [Performance](#performance)
    * [References](#references)
    
@@ -97,6 +88,18 @@ In the target folder, enter the following command:
 flower-simulation --server-app server:app --client-app client:app --num-supernodes 2 
 ```
 Change the number of clients by modifying the value of the "--num-supernodes" variable.
+
+# Architectural Patterns
+
+The Flower framework was extended by adding 4 Architectural Patterns proposed in [1]:
+
+- 1 Client Registry.
+
+- 2 Client Selector.
+
+- 3 Client Clustering.
+
+- 4 Message Compressor.
 
 # Performance
 
