@@ -4,10 +4,13 @@
 <img src="img/ArchitectureEval.png" width="420px" height="300px"/>
 </p>
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13121149.svg)](https://zenodo.org/badge/latestdoi/{IvanComp})
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13121149.svg)](https://doi.org/10.5281/zenodo.13121149)
+
 FedBench is a Federated Learning Platform for testing the performance of a Federated Learning system applying custom specifications.
 FedBench is developed extending [Flower](https://github.com/adap/flower) a Federated Learning Framework. 
 
-The Flower framework was extended by adding 3 different Architectural Patterns for Clients Management [1]:
+The Flower framework was extended by adding 4 Architectural Patterns proposed in [1]:
 
 - 1 Client Registry.
 
@@ -21,6 +24,7 @@ The Flower framework was extended by adding 3 different Architectural Patterns f
 <!--ts-->
    * [Functionalities](#functionalities)
    * [How to run](#how-to-run)
+   * [Experiments](#experiments)
    * [Performance](#performance)
    * [References](#references)
    
@@ -41,6 +45,12 @@ It's possible to run the framework in two ways.
 - Locally (creating virtual local images of clients and serves)
 
 - Distributed (creating container images of clients and serves)
+
+
+# Functionalities
+
+This section propose the replication package of the experiments for the paper titled "Performance Analysis of Architectural Patterns
+for Federated Learning Systems" for the IEEE International Conference on Software Architecture (ICSA 2024).
 
 ## To run the Simulation on Docker containers:
 
@@ -87,7 +97,6 @@ In the target folder, enter the following command:
 ```bash
 flower-simulation --server-app server:app --client-app client:app --num-supernodes 2 
 ```
-
 Change the number of clients by modifying the value of the "--num-supernodes" variable.
 
 # Performance
