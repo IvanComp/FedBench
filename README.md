@@ -22,20 +22,6 @@ Catia Trubiani - Gran Sasso Science Institute (Italy)
    * [Performance](#performance)
    * [References](#references)
    
-
-
-# Functionalities
-
-FedBench allows you to 
-
-# How To Run:
-
-FedBench allows to run a Federated Learning project in two different ways:
-
-- Locally (creating virtual local images of clients and server)
-
-- Distributed (creating container images of clients and server)
-
 # Experiments
 
 This section proposes the replication package of the experiments for the paper titled "Performance Analysis of Architectural Patterns
@@ -78,6 +64,18 @@ docker compose build
 #Launch Docker images (Server, 5 Client)
 NUM_ROUNDS=10 docker-compose up --scale client=5
 ```
+
+# Functionalities
+
+FedBench allows you to 
+
+# How To Run:
+
+FedBench allows to run a Federated Learning project in two different ways:
+
+- Locally (creating virtual local images of clients and server)
+
+- Distributed (creating container images of clients and server)
 
 # Architectural Patterns
 
