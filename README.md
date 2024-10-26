@@ -4,9 +4,14 @@
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.12671621.svg)](https://doi.org/10.5281/zenodo.12671621)
 
-
 FedBench is a Federated Learning platform built on top of the [Flower](https://github.com/adap/flower) an open-source Python library that simplifies building Federated Learning systems.
 FedBench is a Federated Learning framework enhanced with architectural patterns and extended monitoring capabilities for performance evaluation.
+
+## Authors
+
+Ivan Compagnucci - Gran Sasso Science Institute (Italy)<br/>
+Riccardo Pinciroli - Gran Sasso Science Institute (Italy)<br/>
+Catia Trubiani - Gran Sasso Science Institute (Italy)
 
 # Table of contents
 <!--ts-->
@@ -17,15 +22,11 @@ FedBench is a Federated Learning framework enhanced with architectural patterns 
    * [Performance](#performance)
    * [References](#references)
    
+
+
 # Functionalities
 
-This repository is divided in two main folders:
-
-- __1. Client Selector/__: Running FL simulations considering the Client Selector pattern
-
-- __2. Client Clustering/__: Running FL simulations considering the Client Clustering pattern
-
-- __3. Message Compressor/__: Running FL simulations considering the Message Compressor pattern
+FedBench allows you to 
 
 # How To Run:
 
