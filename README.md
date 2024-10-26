@@ -4,8 +4,10 @@
 <img src="img/ArchitectureEval.png" width="420px" height="300px"/>
 </p>
 
+<p align="center">
+<img src="https://img.shields.io/badge/version-1.0-green" alt="Version">
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.12671621.svg)](https://doi.org/10.5281/zenodo.12671621)
-
+</p>
 
 FedBench is a Federated Learning platform built on top of the [Flower](https://github.com/adap/flower) an open-source Python library that simplifies building Federated Learning systems.
 FedBench is a Federated Learning framework enhanced with architectural patterns and extended monitoring capabilities for performance evaluation.
