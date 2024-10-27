@@ -38,7 +38,7 @@ class FlowerClient(NumPyClient):
         self.cid = cid  
         self.model_type = "taskB"
         self.net = NetB().to(DEVICE_B)
-        self.trainloader, self.testloader = load_data_B()  
+        self.trainloader, self.testloader = load_data_B(cid)  
         self.device = DEVICE_B
 
         client_registry.register_client(cid, model_type)
@@ -48,7 +48,7 @@ class FlowerClient(NumPyClient):
         cpu_start = psutil.cpu_percent(interval=None)
         
         set_weights_B(self.net, parameters)
-        results, training_time = train_B(self.net, self.trainloader, self.testloader, epochs=2, device=self.device)       
+        results, training_time = train_B(self.net, self.trainloader, self.testloader, epochs=1, device=self.device)       
         communication_start_time = time.time()
 
         new_parameters = get_weights_B(self.net)

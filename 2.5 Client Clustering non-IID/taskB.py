@@ -1,19 +1,19 @@
 from collections import OrderedDict
 from logging import INFO
-import time  # Added time to measure training times
-import os
-import hashlib
-import numpy as np
-
+import time  
+import random 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from flwr.common.logger import log
-from torch.utils.data import DataLoader, Subset
+from torch.utils.data import DataLoader, Subset, WeightedRandomSampler
 from torchvision.datasets import CIFAR10
 from torchvision.transforms import Compose, Normalize, ToTensor
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+CLASS_NAMES = ['airplane', 'automobile', 'bird', 'cat', 'deer',
+               'dog', 'frog', 'horse', 'ship', 'truck']
 
 class Net(nn.Module):
 
@@ -34,79 +34,93 @@ class Net(nn.Module):
         x = F.relu(self.fc2(x))
         return self.fc3(x)
 
-def load_data():
-    """Load CIFAR-10 dataset and partition it non-IID among clients using Dirichlet distribution."""
-    # Get the client ID
-    CLIENT_ID = os.getenv("HOSTNAME")
-    if CLIENT_ID is None:
-        CLIENT_ID = "clientb-1"  # Default client ID
 
-    # Map CLIENT_ID to client_index
-    # Assuming CLIENT_ID is in the format "clientb-1", "clientb-2", etc.
-    client_num_str = ''.join(filter(str.isdigit, CLIENT_ID))
-    if client_num_str:
-        client_index = int(client_num_str) - 1  # clientb-1 => 0
-    else:
-        client_index = 0
+def count_classes_subset(dataset, subset_indices):
+    """Conta il numero di campioni per classe in un subset del dataset."""
+    counts = {i: 0 for i in range(10)}
+    for idx in subset_indices:
+        _, label = dataset[idx]
+        counts[label] += 1
+    return counts
 
-    num_clients = 2  # Adjust this if you have more clients
 
-    # Set the random seed for consistent partitioning across clients
-    np.random.seed(42)
+def load_data(client_id):
+    """
+    Carica CIFAR-10 (training e test set) con distribuzione non bilanciata per ogni client.
 
-    # Load the full CIFAR-10 dataset
+    Ogni client ha tutte le classi ma con un numero variabile di campioni per classe,
+    assicurando che la somma totale dei campioni sia 50.000.
+
+    Parametri:
+    - client_id (int): Identificatore univoco del client corrente.
+
+    Ritorna:
+    - DataLoader: DataLoader per il training set filtrato.
+    - DataLoader: DataLoader per il test set (invariato).
+    """
     trf = Compose([ToTensor(), Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-    full_trainset = CIFAR10("./data", train=True, download=True, transform=trf)
+    trainset = CIFAR10("./data", train=True, download=True, transform=trf)
     testset = CIFAR10("./data", train=False, download=True, transform=trf)
 
-    # Perform Dirichlet partitioning
-    alpha = 0.5  # Adjust alpha as needed; smaller alpha => more heterogeneity
-    client_indices = non_iid_partition(full_trainset, num_clients, alpha)
+    # Organizza gli indici per classe
+    class_to_indices = {i: [] for i in range(10)}
+    for idx, (_, label) in enumerate(trainset):
+        class_to_indices[label].append(idx)
+    
+    # Seed random per rendere la selezione riproducibile per ogni client
+    random.seed(client_id)  # Usa client_id per variazioni tra client
 
-    # Get the indices for this client
-    indices = client_indices[client_index]
+    # Numero totale di campioni da raggiungere
+    total_samples = 50000
+    num_classes = 10
 
-    # Create subset and DataLoader
-    train_subset = Subset(full_trainset, indices)
-    trainloader = DataLoader(train_subset, batch_size=32, shuffle=True)
+    # Scelta della classe dominante con un numero maggiore di campioni
+    dominant_class = random.choice(range(num_classes))
+    # Genera una distribuzione casuale per i campioni delle classi
+    class_counts = [random.randint(200, 1500) for _ in range(num_classes)]
+    class_counts[dominant_class] = random.randint(5000, 7000)
 
-    # Use the full test set
-    testloader = DataLoader(testset)
+    # Ribilancia la somma dei campioni per arrivare a 50.000
+    current_total = sum(class_counts)
+    scale_factor = total_samples / current_total
+    class_counts = [int(count * scale_factor) for count in class_counts]
+
+    # Correggi eventuali arrotondamenti e verifica la somma esatta
+    diff = total_samples - sum(class_counts)
+    class_counts[dominant_class] += diff  # Aggiusta la classe dominante per arrivare esattamente a 50.000
+
+    # Ora, per ogni classe, seleziona 'count' campioni
+    selected_indices = []
+    for cls, count in enumerate(class_counts):
+        available_indices = class_to_indices[cls]
+        selected = random.sample(available_indices, min(count, len(available_indices)))
+        selected_indices.extend(selected)
+
+    # Crea un Subset e un DataLoader
+    subset_train = Subset(trainset, selected_indices)
+    trainloader = DataLoader(subset_train, batch_size=32, shuffle=True)
+    
+    # DataLoader per il test set rimane invariato
+    testloader = DataLoader(testset, batch_size=32, shuffle=False)
+
+    # Conta e stampa il numero di campioni per classe nel subset del client
+    actual_class_counts = count_classes_subset(trainset, selected_indices)
+    print(f"Task B - Client {client_id} - Distribuzione classi nel training set:")
+    for cls_idx, count in actual_class_counts.items():
+        print(f"  {CLASS_NAMES[cls_idx]}: {count} campioni")
+    
+    log(INFO, f"Client {client_id} - Distribuzione classi: {class_counts}")
 
     return trainloader, testloader
 
-def non_iid_partition(dataset, num_clients, alpha):
-    """Partition dataset among clients using Dirichlet distribution."""
-    num_classes = 10  # CIFAR-10 has 10 classes
-    targets = np.array(dataset.targets)
-    idxs = np.arange(len(targets))
-
-    # For each class, get the indices
-    class_indices = [np.where(targets == i)[0] for i in range(num_classes)]
-
-    # Sample Dirichlet distribution for each class
-    proportions = np.random.dirichlet(alpha=np.repeat(alpha, num_clients), size=num_classes)
-
-    # For each client, collect indices
-    client_indices = [[] for _ in range(num_clients)]
-    for cls_indices, cls_proportions in zip(class_indices, proportions):
-        # Shuffle class indices
-        np.random.shuffle(cls_indices)
-        # Split indices according to sampled proportions
-        splits = np.array_split(cls_indices, (np.cumsum(cls_proportions)[:-1] * len(cls_indices)).astype(int))
-        for idx, split in enumerate(splits):
-            client_indices[idx].extend(split)
-
-    return client_indices
-
 def train(net, trainloader, valloader, epochs, device):
-    """Train the model on the training set, measuring time."""
+    """Addestra il modello sul training set, misurando il tempo."""
     log(INFO, "Starting training...")
 
     # Start measuring training time
     start_time = time.time()
 
-    net.to(device)  # move model to GPU if available
+    net.to(device)  # sposta il modello sulla GPU se disponibile
     criterion = torch.nn.CrossEntropyLoss().to(device)
     optimizer = torch.optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
     net.train()
@@ -136,6 +150,7 @@ def train(net, trainloader, valloader, epochs, device):
 
     return results, training_time
 
+
 def test(net, testloader):
     net.to(DEVICE)
     criterion = torch.nn.CrossEntropyLoss()
@@ -144,7 +159,6 @@ def test(net, testloader):
     all_preds = []
     all_labels = []
 
-    net.eval()  # Set model to evaluation mode
     with torch.no_grad():
         for images, labels in testloader:
             images = images.to(DEVICE)
@@ -153,27 +167,28 @@ def test(net, testloader):
             loss += criterion(outputs, labels).item()
             _, predicted = torch.max(outputs.data, 1)
             correct += (predicted == labels).sum().item()
-            all_preds.append(predicted.cpu())
-            all_labels.append(labels.cpu())
+            all_preds.append(predicted)
+            all_labels.append(labels)
 
     accuracy = correct / len(testloader.dataset)
 
-    # Concatenate all predictions and labels
+    # Concatenare tutte le predizioni e le etichette
     all_preds = torch.cat(all_preds)
     all_labels = torch.cat(all_labels)
 
-    # Calculate F1 score
+    # Calcolo dell'F1 score
     f1 = f1_score_torch(all_labels, all_preds, num_classes=10, average='macro')
 
     return loss, accuracy, f1
 
+
 def f1_score_torch(y_true, y_pred, num_classes, average='macro'):
-    # Create confusion matrix
+    # Creazione della matrice di confusione
     confusion_matrix = torch.zeros(num_classes, num_classes)
     for t, p in zip(y_true, y_pred):
         confusion_matrix[t.long(), p.long()] += 1
 
-    # Calculate precision and recall for each class
+    # Calcolo di precision e recall per ogni classe
     precision = torch.zeros(num_classes)
     recall = torch.zeros(num_classes)
     f1_per_class = torch.zeros(num_classes)
@@ -200,8 +215,10 @@ def f1_score_torch(y_true, y_pred, num_classes, average='macro'):
 
     return f1
 
+
 def get_weights(net):
     return [val.cpu().numpy() for _, val in net.state_dict().items()]
+
 
 def set_weights(net, parameters):
     params_dict = zip(net.state_dict().keys(), parameters)

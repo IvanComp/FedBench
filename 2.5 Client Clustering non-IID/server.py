@@ -374,7 +374,7 @@ class MultiModelStrategy(Strategy):
         parameters: Parameters,
         client_manager: ClientManager,
     ) -> List[Tuple[ClientProxy, FitIns]]:
-        min_clients = 4
+        min_clients = 8
 
         client_manager.wait_for(min_clients) 
 

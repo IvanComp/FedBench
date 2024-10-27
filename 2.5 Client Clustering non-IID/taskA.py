@@ -12,6 +12,9 @@ from torchvision.transforms import Compose, Normalize, ToTensor
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+CLASS_NAMES = ['airplane', 'automobile', 'bird', 'cat', 'deer',
+               'dog', 'frog', 'horse', 'ship', 'truck']
+
 class Net(nn.Module):
 
     def __init__(self) -> None:
