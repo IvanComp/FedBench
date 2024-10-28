@@ -2,6 +2,7 @@ from collections import OrderedDict
 from logging import INFO
 import time  
 import random 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -34,76 +35,42 @@ class Net(nn.Module):
         x = F.relu(self.fc2(x))
         return self.fc3(x)
 
-
 def count_classes_subset(dataset, subset_indices):
-    """Conta il numero di campioni per classe in un subset del dataset."""
     counts = {i: 0 for i in range(10)}
     for idx in subset_indices:
         _, label = dataset[idx]
         counts[label] += 1
     return counts
 
-
-def load_data(client_id):
-    """
-    Carica CIFAR-10 (training e test set) con distribuzione non bilanciata per ogni client.
-
-    Ogni client ha tutte le classi ma con un numero variabile di campioni per classe,
-    assicurando che la somma totale dei campioni sia 50.000.
-
-    Parametri:
-    - client_id (int): Identificatore univoco del client corrente.
-
-    Ritorna:
-    - DataLoader: DataLoader per il training set filtrato.
-    - DataLoader: DataLoader per il test set (invariato).
-    """
+def load_data(client_id, alpha=0.5):
     trf = Compose([ToTensor(), Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
     trainset = CIFAR10("./data", train=True, download=True, transform=trf)
     testset = CIFAR10("./data", train=False, download=True, transform=trf)
 
-    # Organizza gli indici per classe
+    # Costruisce un dizionario di indici per ogni classe
     class_to_indices = {i: [] for i in range(10)}
     for idx, (_, label) in enumerate(trainset):
         class_to_indices[label].append(idx)
-    
-    # Seed random per rendere la selezione riproducibile per ogni client
-    random.seed(client_id)  # Usa client_id per variazioni tra client
 
-    # Numero totale di campioni da raggiungere
-    total_samples = 50000
+    # Distribuzione Dirichlet per i campioni per classe
     num_classes = 10
-
-    # Scelta della classe dominante con un numero maggiore di campioni
-    dominant_class = random.choice(range(num_classes))
-    # Genera una distribuzione casuale per i campioni delle classi
-    class_counts = [random.randint(200, 1500) for _ in range(num_classes)]
-    class_counts[dominant_class] = random.randint(5000, 7000)
-
-    # Ribilancia la somma dei campioni per arrivare a 50.000
-    current_total = sum(class_counts)
-    scale_factor = total_samples / current_total
-    class_counts = [int(count * scale_factor) for count in class_counts]
-
-    # Correggi eventuali arrotondamenti e verifica la somma esatta
-    diff = total_samples - sum(class_counts)
-    class_counts[dominant_class] += diff  # Aggiusta la classe dominante per arrivare esattamente a 50.000
-
-    # Ora, per ogni classe, seleziona 'count' campioni
+    total_samples = 50000
+    proportions = np.random.dirichlet([alpha] * num_classes)  # Distribuzione Dirichlet
+    class_counts = [int(p * total_samples) for p in proportions]  # Campioni per classe
+    
     selected_indices = []
     for cls, count in enumerate(class_counts):
         available_indices = class_to_indices[cls]
         selected = random.sample(available_indices, min(count, len(available_indices)))
         selected_indices.extend(selected)
 
-    # Crea un Subset e un DataLoader
+    # Creazione del subset del training set e DataLoader
     subset_train = Subset(trainset, selected_indices)
     trainloader = DataLoader(subset_train, batch_size=32, shuffle=True)
     
-    # DataLoader per il test set rimane invariato
+    # Creazione del DataLoader per il test set
     testloader = DataLoader(testset, batch_size=32, shuffle=False)
 
-    # Conta e stampa il numero di campioni per classe nel subset del client
     actual_class_counts = count_classes_subset(trainset, selected_indices)
     print(f"Task B - Client {client_id} - Distribuzione classi nel training set:")
     for cls_idx, count in actual_class_counts.items():
@@ -114,7 +81,7 @@ def load_data(client_id):
     return trainloader, testloader
 
 def train(net, trainloader, valloader, epochs, device):
-    """Addestra il modello sul training set, misurando il tempo."""
+
     log(INFO, "Starting training...")
 
     # Start measuring training time
