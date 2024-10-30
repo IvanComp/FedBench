@@ -1,16 +1,20 @@
 from collections import OrderedDict
 from logging import INFO
-import time  # Added time to measure training times
-
+import time  
+import random 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from flwr.common.logger import log
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset, WeightedRandomSampler
 from torchvision.datasets import CIFAR10
 from torchvision.transforms import Compose, Normalize, ToTensor
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+CLASS_NAMES = ['airplane', 'automobile', 'bird', 'cat', 'deer',
+               'dog', 'frog', 'horse', 'ship', 'truck']
 
 class Net(nn.Module):
 
@@ -31,23 +35,59 @@ class Net(nn.Module):
         x = F.relu(self.fc2(x))
         return self.fc3(x)
 
+def count_classes_subset(dataset, subset_indices):
+    counts = {i: 0 for i in range(10)}
+    for idx in subset_indices:
+        _, label = dataset[idx]
+        counts[label] += 1
+    return counts
 
-def load_data():
-    """Load CIFAR-10 (training and test set)."""
+def load_data(client_id, alpha=0.5):
     trf = Compose([ToTensor(), Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
     trainset = CIFAR10("./data", train=True, download=True, transform=trf)
     testset = CIFAR10("./data", train=False, download=True, transform=trf)
-    return DataLoader(trainset, batch_size=32, shuffle=True), DataLoader(testset)
 
+    # Costruisce un dizionario di indici per ogni classe
+    class_to_indices = {i: [] for i in range(10)}
+    for idx, (_, label) in enumerate(trainset):
+        class_to_indices[label].append(idx)
+
+    # Distribuzione Dirichlet per i campioni per classe
+    num_classes = 10
+    total_samples = 50000
+    proportions = np.random.dirichlet([alpha] * num_classes)  # Distribuzione Dirichlet
+    class_counts = [int(p * total_samples) for p in proportions]  # Campioni per classe
+    
+    selected_indices = []
+    for cls, count in enumerate(class_counts):
+        available_indices = class_to_indices[cls]
+        selected = random.sample(available_indices, min(count, len(available_indices)))
+        selected_indices.extend(selected)
+
+    # Creazione del subset del training set e DataLoader
+    subset_train = Subset(trainset, selected_indices)
+    trainloader = DataLoader(subset_train, batch_size=32, shuffle=True)
+    
+    # Creazione del DataLoader per il test set
+    testloader = DataLoader(testset, batch_size=32, shuffle=False)
+
+    actual_class_counts = count_classes_subset(trainset, selected_indices)
+    print(f"Task B - Client {client_id} - Distribuzione classi nel training set:")
+    for cls_idx, count in actual_class_counts.items():
+        print(f"  {CLASS_NAMES[cls_idx]}: {count} campioni")
+    
+    log(INFO, f"Client {client_id} - Distribuzione classi: {class_counts}")
+
+    return trainloader, testloader
 
 def train(net, trainloader, valloader, epochs, device):
-    """Train the model on the training set, measuring time."""
+
     log(INFO, "Starting training...")
 
     # Start measuring training time
     start_time = time.time()
 
-    net.to(device)  # move model to GPU if available
+    net.to(device)  # sposta il modello sulla GPU se disponibile
     criterion = torch.nn.CrossEntropyLoss().to(device)
     optimizer = torch.optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
     net.train()
@@ -76,6 +116,7 @@ def train(net, trainloader, valloader, epochs, device):
     }
 
     return results, training_time
+
 
 def test(net, testloader):
     net.to(DEVICE)
@@ -106,6 +147,7 @@ def test(net, testloader):
     f1 = f1_score_torch(all_labels, all_preds, num_classes=10, average='macro')
 
     return loss, accuracy, f1
+
 
 def f1_score_torch(y_true, y_pred, num_classes, average='macro'):
     # Creazione della matrice di confusione
@@ -140,8 +182,10 @@ def f1_score_torch(y_true, y_pred, num_classes, average='macro'):
 
     return f1
 
+
 def get_weights(net):
     return [val.cpu().numpy() for _, val in net.state_dict().items()]
+
 
 def set_weights(net, parameters):
     params_dict = zip(net.state_dict().keys(), parameters)
