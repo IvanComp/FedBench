@@ -1,7 +1,7 @@
 # FedBench
 
 <p align="center">
-<img src="img/logoFedBench.png" width="280px" height="130px"/>
+<img src="img/logoFedBench.png" width="310px" height="230px"/>
 </p>
 
 <img src="https://img.shields.io/badge/version-1.0-green" alt="Version">
