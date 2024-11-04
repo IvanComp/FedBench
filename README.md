@@ -1,4 +1,4 @@
-# FedBench
+# Open Science Artifact: Performance Analysis of Architectural Patterns for Federated Learning Systems
 
 <p align="center">
 <img src="img/logoFedBench.png" width="310px" height="230px"/>
@@ -8,82 +8,35 @@
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.12671621.svg)](https://doi.org/10.5281/zenodo.12671621)
 
-FedBench is a Federated Learning platform built on top of the [Flower](https://github.com/adap/flower) an open-source Python library that simplifies building Federated Learning systems.
-FedBench is a Federated Learning framework enhanced with architectural patterns and extended monitoring capabilities for performance evaluation.
+This Open Science Artifact contains a Federated Learning platform built on top of the [Flower](https://github.com/adap/flower) an open-source Python library that simplifies building Federated Learning systems.
 
-## Authors
-
-Ivan Compagnucci - Gran Sasso Science Institute (Italy)<br/>
-Riccardo Pinciroli - Gran Sasso Science Institute (Italy)<br/>
-Catia Trubiani - Gran Sasso Science Institute (Italy)
+This platform was utilized to in the paper "Performance Analysis of Architectural Patterns for Federated Learning Systems" for the IEEE International Conference on Software Architecture (ICSA 2025).
 
 # Table of contents
 <!--ts-->
-   * [Functionalities](#functionalities)
-   * [How to run](#how-to-run)
-   * [Experiments](#experiments)
+   * [Abstract](#abstract)
+   * [Package Structure](#packagestructure)
    * [Architectural Patterns](#architecturalpatterns)
-   * [Performance](#performance)
    * [References](#references)
    
-# Experiments
+# Abstract
 
-This section proposes the replication package of the experiments for the paper titled "Performance Analysis of Architectural Patterns
-for Federated Learning Systems" for the IEEE International Conference on Software Architecture (ICSA 2024).
+_Context_ Designing federated learning systems is not trivial, even more so when client devices show large heterogeneity while contributing to the learning process. Architectural patterns have been recently defined in the literature to deal with the design challenges of federated learning, thus providing reusable solutions to common problems within a given context. However, patterns lead to both benefits and drawbacks, e.g., introducing a client registry improves the maintainability but it requires extra-costs.    
 
-## To run the Framework on Docker containers:
+_Objective_ The goal of this paper is to showcase the performance impact of applying architectural patterns in federated learning systems, thus pointing out the pros and cons of a selected number of three patterns.
 
-# Client Selector
+_Method_ We extend the Flower framework, a well-assessed and unified approach to operationalize Federated Learning projects.
 
-In the __1. Client Selector/__ folder with 'docker-compose' file, enter the following command:
+_Results_ Experimental results show evidence of the trade-off between system performance and learning accuracy, thus providing quantitative information to software architects and supporting them in selecting design alternatives. 
 
-```bash
-#Build Docker images
-docker compose build
+# Package Structure
 
-#Launch Docker images (Server, 2 Clients A with "High" specifications, 2 Client A with "Low" specifications
-NUM_ROUNDS=10 docker-compose up --scale clientahigh=2 --scale clientalow=2
-```
+The structure of this package is organized as follow:
 
-# Client Cluster
-
-In the __2. Client Cluster/__ folder with 'docker-compose' file, enter the following command:
-
-```bash
-#Build Docker images
-docker compose build
-
-#Launch Docker images (Server, 2 Clients A, 2 Clients B)
-NUM_ROUNDS=10 docker-compose up --scale clienta=2 --scale clientb=2
-```
-
-# Message Compressor
-
-In the __3. Message Compressor/__ folder with 'docker-compose' file, enter the following command:
-
-```bash
-#Build Docker images
-docker compose build
-
-#Launch Docker images (Server, 5 Client)
-NUM_ROUNDS=10 docker-compose up --scale client=5
-```
-
-# Functionalities
-
-FedBench allows you to 
-
-# How To Run:
-
-FedBench allows to run a Federated Learning project in two different ways:
-
-- Locally (creating virtual local images of clients and server)
-
-- Distributed (creating container images of clients and server)
 
 # Architectural Patterns
 
-FedBench extends the Flower framework by adding 4 Architectural Patterns proposed in [1]:
+The 4 Architectural Patterns proposed in [1] and implemented in our framework are:
 
 | Architectural Pattern | Pattern Category | Description |
 | --- | --- | --- | 
@@ -91,13 +44,6 @@ FedBench extends the Flower framework by adding 4 Architectural Patterns propose
 | **Client Selector** | `Client Management` | TODO |
 | **Client Cluster** | `Client Management` | TODO |
 | **Message Compressor** | `Model Management` | TODO |
-
-# Performance
-
-FedBench allows to generation of a set of performance benchmarks (graphs) derived from the execution.
-They are automatically stored in the _/performance_ folder. Below you can find some examples.
-
-
 
 # References
 
