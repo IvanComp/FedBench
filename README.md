@@ -23,17 +23,33 @@ This platform was utilized to in the paper "Performance Analysis of Architectura
    
 # Abstract
 
-_Context_ Designing federated learning systems is not trivial, even more so when client devices show large heterogeneity while contributing to the learning process. Architectural patterns have been recently defined in the literature to deal with the design challenges of federated learning, thus providing reusable solutions to common problems within a given context. However, patterns lead to both benefits and drawbacks, e.g., introducing a client registry improves the maintainability but it requires extra-costs.    
+_Context._ Designing federated learning systems is not trivial, even more so when client devices show large heterogeneity while contributing to the learning process. Architectural patterns have been recently defined in the literature to deal with the design challenges of federated learning, thus providing reusable solutions to common problems within a given context. However, patterns lead to both benefits and drawbacks, e.g., introducing a client registry improves the maintainability but it requires extra-costs.    
 
-_Objective_ The goal of this paper is to showcase the performance impact of applying architectural patterns in federated learning systems, thus pointing out the pros and cons of a selected number of three patterns.
+_Objective._ The goal of this paper is to showcase the performance impact of applying architectural patterns in federated learning systems, thus pointing out the pros and cons of a selected number of three patterns.
 
-_Method_ We extend the Flower framework, a well-assessed and unified approach to operationalize Federated Learning projects.
+_Method._ We extend the Flower framework, a well-assessed and unified approach to operationalize Federated Learning projects.
 
-_Results_ Experimental results show evidence of the trade-off between system performance and learning accuracy, thus providing quantitative information to software architects and supporting them in selecting design alternatives. 
+_Results._ Experimental results show evidence of the trade-off between system performance and learning accuracy, thus providing quantitative information to software architects and supporting them in selecting design alternatives. 
 
 # Package Structure
 
+---
+dataset: [CIFAR-10](https://www.cs.toronto.edu/~kriz/cifar.html)
+model: [Convolutional Neural Network]
+framework: [Flower, pyTorch, Torchvision]
+---
+
 The structure of this package is organized as follow:
+
+```bash
+$ tree .
+.
+├── /1. Client Selector      # <-- contains `Client Selector` experiments
+├── /2. Client Clustering    # <-- contains `Client Cluster` experiments
+├── /3. Message Compressor   # <-- contains `Message Compressor` experiments
+├── Jupyter Notebooks for Data Visualization   # <-- contains a set of charts for the visualization of the results
+└── README.md             # <-- README file
+```
 
 # Prerequisites
 
@@ -53,7 +69,9 @@ docker compose version
 
 # How To Run
 
-To run a Federated Learning project, please check the README file in the folder of the desired architectural pattern.
+To run a Federated Learning project, please refer to the README file located within the folder of the correspective architectural pattern.
+
+Istructions to run the experiments for each architectural pattern, are reported in the README  by clicking the corresponding link in the next [section](#architectural-patterns) or by navigating directly to the folder of the specific architectural pattern.
 
 # Architectural Patterns
 
@@ -65,7 +83,7 @@ The 4 Architectural Patterns proposed in [1] and implemented in our framework ar
 | **Client Cluster** | `Client Management` | A strategy to group clients into clusters based on shared characteristics, such as data similarity or device attributes, improving model accuracy and convergence in non-IID data scenarios. | [Link](1.%20Client%20Cluster) |
 | **Message Compressor** | `Model Management` | A component designed to reduce the size of data exchanged between clients and the server by compressing messages, which lowers communication latency and bandwidth usage in federated learning environments. | [Link](1.%20Message%20Compressor) |
 
-The Client Registry architectural pattern is implemented by adding the following parameters:
+The **Client Registry** architectural pattern is implemented by adding the following parameters:
 
 | Attribute | Data Type | Description |
 | --- | --- | --- | 
