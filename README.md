@@ -1,7 +1,7 @@
 ---
+framework: [Flower, PyTorch, Torchvision]
 dataset: [CIFAR-10]
 model: [Convolutional Neural Network]
-framework: [Flower, PyTorch, Torchvision]
 version: [1.0.0]
 ---
 
@@ -16,7 +16,7 @@ version: [1.0.0]
 
 This Open Science Artifact contains a Federated Learning platform built on top of the [Flower](https://github.com/adap/flower) an open-source Python library that simplifies building Federated Learning systems.
 
-This platform was utilized to in the paper "Performance Analysis of Architectural Patterns for Federated Learning Systems" for the IEEE International Conference on Software Architecture (ICSA 2025).
+This platform was utilized in the paper "_Performance Analysis of Architectural Patterns for Federated Learning Systems_" for the 22nd IEEE International Conference on Software Architecture (ICSA 2025).
 
 # Table of contents
 <!--ts-->
@@ -29,7 +29,7 @@ This platform was utilized to in the paper "Performance Analysis of Architectura
    
 # Abstract
 
-_Context._ Designing federated learning systems is not trivial, even more so when client devices show large heterogeneity while contributing to the learning process. Architectural patterns have been recently defined in the literature to deal with the design challenges of federated learning, thus providing reusable solutions to common problems within a given context. However, patterns lead to both benefits and drawbacks, e.g., introducing a client registry improves the maintainability but it requires extra-costs.    
+_Context._ Designing federated learning systems is not trivial, even more so when client devices show large heterogeneity while contributing to the learning process. Architectural patterns have been recently defined in the literature to deal with the design challenges of federated learning, thus providing reusable solutions to common problems within a given context. However, patterns lead to both benefits and drawbacks, e.g., introducing a client registry improves the maintainability but it requires extra costs.    
 
 _Objective._ The goal of this paper is to showcase the performance impact of applying architectural patterns in federated learning systems, thus pointing out the pros and cons of a selected number of three patterns.
 
