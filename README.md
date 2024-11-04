@@ -1,12 +1,16 @@
+---
+dataset: [CIFAR-10](https://www.cs.toronto.edu/~kriz/cifar.html)
+model: [Convolutional Neural Network]
+framework: [Flower, pyTorch, Torchvision]
+version: [<img src="https://img.shields.io/badge/version-1.0-green" alt="Version">]
+version: [[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.12671621.svg)](https://doi.org/10.5281/zenodo.12671621)]
+---
+
 # Open Science Artifact: Performance Analysis of Architectural Patterns for Federated Learning Systems
 
 <p align="center">
 <img src="img/logoFedBench.png" width="310px" height="230px"/>
 </p>
-
-<img src="https://img.shields.io/badge/version-1.0-green" alt="Version">
-
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.12671621.svg)](https://doi.org/10.5281/zenodo.12671621)
 
 This Open Science Artifact contains a Federated Learning platform built on top of the [Flower](https://github.com/adap/flower) an open-source Python library that simplifies building Federated Learning systems.
 
@@ -33,11 +37,8 @@ _Results._ Experimental results show evidence of the trade-off between system pe
 
 # Package Structure
 
----
-dataset: [CIFAR-10](https://www.cs.toronto.edu/~kriz/cifar.html)
-model: [Convolutional Neural Network]
-framework: [Flower, pyTorch, Torchvision]
----
+
+
 
 The structure of this package is organized as follow:
 
@@ -47,8 +48,8 @@ $ tree .
 ├── /1. Client Selector      # <-- contains `Client Selector` experiments
 ├── /2. Client Clustering    # <-- contains `Client Cluster` experiments
 ├── /3. Message Compressor   # <-- contains `Message Compressor` experiments
-├── Jupyter Notebooks for Data Visualization   # <-- contains a set of charts for the visualization of the results
-└── README.md             # <-- README file
+├── Experiments Results      # <-- contains a set of charts for the visualization of the results
+└── README.md                # <-- README file
 ```
 
 # Prerequisites
