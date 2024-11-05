@@ -12,7 +12,7 @@ version: [1.0.0]
 </p>
 <img src="https://img.shields.io/badge/version-1.0-green" alt="Version">
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.12671621.svg)](https://doi.org/10.5281/zenodo.12671621)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.12671621.svg)](https://doi.org/10.5281/zenodo.14039470)
 
 This Open Science Artifact contains a Federated Learning platform built on top of the [Flower](https://github.com/adap/flower) an open-source Python library that simplifies building Federated Learning systems.
 
