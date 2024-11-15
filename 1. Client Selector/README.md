@@ -6,18 +6,26 @@ This folder contains models, scripts, data, and [link](https://github.com/IvanCo
 
 To reproduce the results presented in the paper, users can run new simulations. 
 <br>
-Note that, **different values may be observed due to the stochastic simulation**. Please, follow these steps:
+Note that, **different values may be observed due to the stochastic simulation**. 
+<br>
+Please, follow these steps:
 
 1. Run Docker Desktop
-2. Open the terminal in the _1. Client Selector_ folder
+2. Open the terminal in the _A_,_B_ or _C_ folders (Corresponding to the default configurations of the experiments propose in the paper)
 3. Enter the following command:
 
 ```bash
 #Build Docker images
 docker compose build
 
-#Launch Docker Compose Configuration.
-#In this example: 5 images (1 Server, 2 Clients A with "High" specifications, 2 Client A with "Low" specifications
+#Launch Docker Compose Configuration. Please chose one of the following configurations:
+#Configuration A (1 Server, 4 Clients with "High" specifications) -- Without Client Selector pattern
+NUM_ROUNDS=10 docker-compose up --scale clientahigh=2 --scale clientalow=2
+
+#Configuration B (1 Server, 3 Clients A with "High" specifications, 1 Client with "Low" specifications) -- Without Client Selector pattern
+NUM_ROUNDS=10 docker-compose up --scale clientahigh=2 --scale clientalow=2
+
+#Configuration C (1 Server, 3 Clients A with "High" specifications, 1 Client A with "Low" specifications) -- With Client Selector pattern
 NUM_ROUNDS=10 docker-compose up --scale clientahigh=2 --scale clientalow=2
 ```
 4. The process of Federated Learning will start, and the progress of each round will be displayed in the terminal.
@@ -38,9 +46,13 @@ In the following, there are the input parameters for the Client Selector archite
 # Customize Input Parameters
 
 Users can also tune the input parameters of provided to investigate performance using with the same pattern.
-All of the following input parameters can be varied by changing the corresponding values from the command line before starting the project.
+All of the following input parameters can be varied by changing the corresponding values from the command line before starting the project, For example:
 
+```bash
+# Custom Configuration:
+NUM_ROUNDS=50 docker-compose up --scale clienthigh=15 --scale clientlow=5
+```
 
-Due to the physical allocation of CPU and RAM, changing these parameters requires access to the **docker-compose** file in which the resources to be allocated to the container are set.
+Note that Due to the physical allocation of CPU and RAM, changing these parameters requires access to the **docker-compose** file in which the resources to be allocated to the container are set.
 
 
