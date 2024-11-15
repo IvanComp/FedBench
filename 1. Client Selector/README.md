@@ -4,7 +4,7 @@ This folder contains scripts, data, and [experimental results](https://github.co
 
 It is possible to replicate the same experiments proposed in the paper or change the settings of the experiment considering different input parameters.
 
-The subfolder cpontaints the experiments discussed in the paper. For customized experiments see this [section](#how-to-run-customized-experiments)
+This subfolder contains the experiments discussed in the paper. For customized experiments see this [section](#how-to-run-customized-experiments)
 
 ```bash
 $ tree .
@@ -52,7 +52,7 @@ NUM_ROUNDS=10 docker-compose up --scale clientahigh=3 --scale clientalow=1
 NUM_ROUNDS=10 docker-compose up --scale clienthigh=3 --scale clientlow=1
 ```
 4. The process of Federated Learning will start, and the progress of each round will be displayed in the terminal.
-   <br> Note that **different values may be observed due to the stochastic simulation**. 
+   <br> Note that **different values may be observed because of the stochastic nature of the simulation**. 
 
 
 # How to run Customized Experiments
