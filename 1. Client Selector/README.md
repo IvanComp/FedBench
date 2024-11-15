@@ -1,6 +1,6 @@
 # Client Selector Architetcural Pattern
 
-This folder contains models, scripts, data, and results of the Client Selector architectural pattern.
+This folder contains models, scripts, data, and link to the results of the Client Selector architectural pattern experiment.
 
 # How to run Experiments
 
