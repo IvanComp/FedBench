@@ -20,19 +20,19 @@ docker compose build
 #In this example: 5 images (1 Server, 2 Clients A with "High" specifications, 2 Client A with "Low" specifications
 NUM_ROUNDS=10 docker-compose up --scale clientahigh=2 --scale clientalow=2
 ```
-4. The process of federated learning will start, and the progress of each round will be displayed in the terminal.
+4. The process of Federated Learning will start, and the progress of each round will be displayed in the terminal.
 
 # Input Parameters
 
 In the following, there are the input parameters for the Client Selector architectural pattern.
 
 | Parameter | Experiment Default Value | Docker Container Name | Description | 
-| --- | --- | --- |
+| --- | --- | --- | --- |
 | `NUM_ROUNDS` | 10 | - | Number of Federated Learning rounds. |
-| `nS` | 1 (Fixed) | - | Number of Federated Learning rounds. |
-| `nC` | 4 | **clienthigh** for High-Spec clients, **clientlow** for Low-Spec clients | Number of Federated Learning rounds. |
-| `n_CPU` | 2 for High-Spec clients, 1 for Low-Spec clients | Number of physical CPU cores allocated to each container |
-| `RAM` | 2GB | Memory capacity allocated to each container  |
+| `nS` | 1 (Fixed) | - | Number of Server. |
+| `nC` | 4 | **clienthigh** = High-Spec clients, <br> **clientlow** = Low-Spec clients | Number of Clients. |
+| `n_CPU` | 2 for High-Spec clients,<br> 1 for Low-Spec clients | - | Number of physical CPU cores allocated to each container |
+| `RAM` | 2GB | - | Memory capacity allocated to each container |
 
 
 # Customize Input Parameters
