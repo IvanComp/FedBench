@@ -29,13 +29,15 @@ This platform was utilized in the paper "_Performance Analysis of Architectural 
    
 # Abstract
 
-_Context._ Designing federated learning systems is not trivial, even more so when client devices show large heterogeneity while contributing to the learning process. Architectural patterns have been recently defined in the literature to deal with the design challenges of federated learning, thus providing reusable solutions to common problems within a given context. However, patterns lead to both benefits and drawbacks, e.g., introducing a client registry improves the maintainability but it requires extra costs.    
+_Context._ Designing Federated Learning systems is not trivial, as it requires managing heterogeneous and distributed clients' resources, while balancing data privacy and system efficiency. 
+Architectural patterns have been recently specified in the literature to showcase reusable solutions to common problems within Federated Learning systems. 
+However, patterns often lead to both benefits and drawbacks, e.g., introducing a message compressor algorithm may reduce the system communication time, but it may produce additional computational costs for clients' devices. 
 
-_Objective._ The goal of this paper is to showcase the performance impact of applying architectural patterns in federated learning systems, thus pointing out the pros and cons of a selected number of three patterns.
+_Objective._ The goal of this paper is to quantitatively investigate the performance impact of applying a selected set of architectural patterns when designing Federated Learning systems, thus providing evidence of their pros and cons.
 
-_Method._ We extend the Flower framework, a well-assessed and unified approach to operationalize Federated Learning projects.
+_Method._ We develop an open source environment by extending the well-established Flower framework; it integrates the implementation of four architectural patterns and evaluates their performance characteristics.
 
-_Results._ Experimental results show evidence of the trade-off between system performance and learning accuracy, thus providing quantitative information to software architects and supporting them in selecting design alternatives. 
+_Results._ Experimental results assess that architectural patterns indeed bring performance gains and pains, as raised by the practitioners in the literature. Our framework can support software architects in making informed design choices when designing Federated Learning systems.
 
 # Package Structure
 
