@@ -33,8 +33,7 @@ To reproduce the results presented in the paper please, follow these steps:
 
 1. Run Docker Desktop
 2. Open the _With Client Selector_ or _Without Client Selector_ folders based on the type of experiment.
-2. Open the terminal in the _A_,_B_ or _C_ folders (Corresponding to the default configurations of the experiments proposed in the paper).
-3. Based on the folder name, enter the following command:
+3. Open the terminal and enter the following command:
 
 ```bash
 #Build Docker images
