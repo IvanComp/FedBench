@@ -1,4 +1,4 @@
-# Client Selector Architetcural Pattern
+# Client Selector Architectural Pattern
 
 This folder contains models, scripts, data, and [experiment results](https://github.com/IvanComp/AP4Fed/blob/main/Experiments%20Results/1ClientSelector.ipynb) of the Client Selector architectural pattern.
 
@@ -14,7 +14,7 @@ Please, follow these steps:
 
 1. Run Docker Desktop
 2. Open the terminal in the _A_,_B_ or _C_ folders (Corresponding to the default configurations of the experiments propose in the paper)
-3. Base on the folder name, enter the following command:
+3. Based on the folder name, enter the following command:
 
 ```bash
 #Build Docker images
@@ -44,8 +44,8 @@ In the following, there are the input parameters for the Client Selector archite
 | `nC` | 4 | **clienthigh** = High-Spec clients, <br> **clientlow** = Low-Spec clients | Number of Clients. |
 | `n_CPU` | 2 for High-Spec clients,<br> 1 for Low-Spec clients | - | Number of physical CPU cores allocated to each container |
 | `RAM` | 2GB | - | Memory capacity allocated to each container |
-| `RAM` | 2GB | - | Memory capacity allocated to each container |
-
+| `Selection Strategy` | Resource-based | - | The Selection Strategy will include/exclude clients based on their computational capabilities |
+| `Selection Criteria` | Number of CPU > 1 | - | The Selector Criteria will evaluate clients based on their number of CPU |
 
 # How to run Customized Experiments
 
