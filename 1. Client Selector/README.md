@@ -8,15 +8,15 @@ It is possible to replicate the same experiments proposed in the paper or change
 
 In the following, there are the input parameters for the Client Selector architectural pattern.
 
-| Parameter | Experiment Default Value | Docker Container Name | Description | 
-| --- | --- | --- | --- |
-| `NUM_ROUNDS` | 10 | - | Number of Federated Learning rounds. |
-| `nS` | 1 | - | Number of Server. |
-| `nC` | 4 | **clienthigh** = High-Spec clients, <br> **clientlow** = Low-Spec clients | Number of Clients. |
+| Parameter | Experiment Default Value | Description | 
+| --- | --- | --- | 
+| `NUM_ROUNDS` | 10 | Number of Federated Learning rounds. |
+| `nS` | 1 | Number of Server. Container name: server|
+| `nC` | 4 | Number of Clients. Container name: **clienthigh** = High-Spec clients, <br> **clientlow** = Low-Spec clients|
 | `n_CPU` | 2 for High-Spec clients,<br> 1 for Low-Spec clients | - | Number of physical CPU cores allocated to each container |
-| `RAM` | 2GB | - | Memory capacity allocated to each container |
-| `Selection Strategy` | Resource-based | - | The Selection Strategy will include/exclude clients based on their computational capabilities |
-| `Selection Criteria` | Number of CPU > 1 | - | The Selector Criteria will evaluate clients based on their number of CPU |
+| `RAM` | 2GB | Memory capacity allocated to each container |
+| `Selection Strategy` | Resource-based | The Selection Strategy will include/exclude clients based on their computational capabilities |
+| `Selection Criteria` | Number of CPU > 1 | The Selector Criteria will evaluate clients based on their number of CPU |
 
 # How to run the Paper's Experiments
 
