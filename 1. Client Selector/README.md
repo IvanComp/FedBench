@@ -4,6 +4,15 @@ This folder contains scripts, data, and [experimental results](https://github.co
 
 It is possible to replicate the same experiments proposed in the paper or change the settings of the experiment considering different input parameters.
 
+The subfolder cpontaints the experiments discussed in the paper. For customized experiments see this [section](#how-to-run-customized-experiments)
+
+```bash
+$ tree .
+.
+├── /1. Without Client Selector   # <-- contains Configurations A and B to replicate experiments 
+├── /2. With Client Selector      # <-- contains Configurations C to replicate experiment 
+```
+
 # Input Parameters
 
 In the following, there are the input parameters for the Client Selector architectural pattern.
@@ -23,7 +32,8 @@ In the following, there are the input parameters for the Client Selector archite
 To reproduce the results presented in the paper please, follow these steps:
 
 1. Run Docker Desktop
-2. Open the terminal in the _A_,_B_ or _C_ folders (Corresponding to the default configurations of the experiments proposed in the paper)
+2. Open the _With Client Selector_ or _Without Client Selector_ folders based on the type of experiment.
+2. Open the terminal in the _A_,_B_ or _C_ folders (Corresponding to the default configurations of the experiments proposed in the paper).
 3. Based on the folder name, enter the following command:
 
 ```bash
