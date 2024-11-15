@@ -57,6 +57,4 @@ All of the following input parameters can be varied by changing the correspondin
 NUM_ROUNDS=50 docker-compose up --scale clienthigh=15 --scale clientlow=5
 ```
 
-Note that Due to the physical allocation of CPU and RAM, changing these parameters requires access to the **docker-compose** file in which the resources to be allocated to the container are set.
-
-
+Note that changing CPU and RAM parameters requires access to the docker-compose file, where these settings can be manually adjusted.
