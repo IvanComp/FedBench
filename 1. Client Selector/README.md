@@ -2,9 +2,7 @@
 
 This folder contains scripts, data, and [experimental results](https://github.com/IvanComp/AP4Fed/blob/main/Experiments%20Results/1ClientSelector.ipynb) of the Client Selector architectural pattern.
 
-It is possible to replicate the same experiments proposed in the paper or change the settings of the experiment considering different input parameters.
-
-This subfolder contains the experiments discussed in the paper. For customized experiments see this [section](#how-to-run-customized-experiments)
+It is possible to replicate the same experiments proposed in the paper or run the experiments by considering different input parameters (see [section](#how-to-run-customized-experiments)).
 
 ```bash
 $ tree .
@@ -29,6 +27,7 @@ In the following, there are the input parameters for the Client Selector archite
 
 # How to run the Paper's Experiments
 
+The commands for the experiments proposed in the paper are defined in the following.
 To reproduce the results presented in the paper please, follow these steps:
 
 1. Run Docker Desktop
