@@ -4,7 +4,6 @@ from flwr.common import (
     ndarrays_to_parameters,
     Scalar,
     Context,
-    Parameters,
 )
 from typing import Dict
 import time
@@ -15,7 +14,8 @@ import hashlib
 import psutil
 import random
 import torch
-from io import BytesIO
+from flwr.common.logger import log
+from logging import INFO
 from taskA import (
     DEVICE as DEVICE_A,
     Net as NetA,
@@ -25,13 +25,8 @@ from taskA import (
     train as train_A,
     test as test_A
 )
-import zlib
-import pickle
-import numpy as np
-from APClient import ClientRegistry
 
-MessageCompressorClientServer = True
-MessageCompressorServerClient = True
+from APClient import ClientRegistry
 
 CLIENT_ID = os.getenv("HOSTNAME")
 
@@ -51,38 +46,15 @@ class FlowerClient(NumPyClient):
         client_registry.register_client(cid, model_type)
 
     def fit(self, parameters, config):
-        cpu_start = psutil.cpu_percent(interval=None)
-        compressed_parameters_hex = config.get("compressed_parameters_hex")
-        numpy_arrays = None
+        #print(f"CLIENT {self.cid} Successfully Configured. Target Model: {self.model_type}", flush=True)
 
-        #DECOMPRESSION CODE Server to Client
-        if MessageCompressorServerClient:
-            compressed_parameters = bytes.fromhex(compressed_parameters_hex)
-            decompressed_parameters = pickle.loads(zlib.decompress(compressed_parameters))
-            numpy_arrays = [np.load(BytesIO(tensor)) for tensor in decompressed_parameters.tensors]
-            numpy_arrays = [arr.astype(np.float32) for arr in numpy_arrays]
-            parameters = numpy_arrays
-            
+        n_cpu = query_cpu()        
         set_weights_A(self.net, parameters)
         results, training_time, start_comm_time = train_A(self.net, self.trainloader, self.testloader, epochs=1, device=self.device)       
 
         new_parameters = get_weights_A(self.net)
-        compressed_parameters_hex = None
 
-        #COMPRESSION CODE Client to Server
-        if MessageCompressorClientServer:
-            serialized_parameters = pickle.dumps(new_parameters)
-            original_size = len(serialized_parameters)  
-            compressed_parameters = zlib.compress(serialized_parameters)
-            compressed_size = len(compressed_parameters)  
-            compressed_parameters_hex = compressed_parameters.hex()
-            reduction_bytes = original_size - compressed_size
-            reduction_percentage = (reduction_bytes / original_size) * 100
-
-            print(f"Compression from Client to Server: reduction of {reduction_bytes} bytes, {reduction_percentage:.2f}%")
-        
-        cpu_end = psutil.cpu_percent(interval=None)
-        cpu_usage = (cpu_start + cpu_end) / 2
+        cpu_usage = n_cpu
 
         metrics = {
             "train_loss": results["train_loss"],
@@ -93,16 +65,13 @@ class FlowerClient(NumPyClient):
             "val_f1": results["val_f1"],
             "training_time": training_time,
             "cpu_usage": cpu_usage,
+            "n_cpu": n_cpu,
             "client_id": self.cid,
             "model_type": self.model_type,
             "start_comm_time": start_comm_time,
-            "compressed_parameters_hex": compressed_parameters_hex,
         }
 
-        if MessageCompressorClientServer:
-            return [], len(self.trainloader.dataset), metrics
-        else:
-            return new_parameters, len(self.trainloader.dataset), metrics
+        return new_parameters, len(self.trainloader.dataset), metrics
 
     def evaluate(self, parameters, config):
         print(f"CLIENT {self.cid} ({self.model_type}): Starting evaluation.", flush=True)
@@ -117,6 +86,17 @@ class FlowerClient(NumPyClient):
         }
         return loss, len(self.testloader.dataset), metrics
 
+def query_cpu():
+    import os
+    try:
+        with open("/sys/fs/cgroup/cpu.max", "rt") as f:
+            cfs_quota_us, cfs_period_us = [int(v) for v in f.read().strip().split()]
+            cpu_quota = cfs_quota_us // cfs_period_us
+    except FileNotFoundError:
+        cpu_quota = os.cpu_count()
+
+    return cpu_quota
+        
 if __name__ == "__main__":
     from flwr.client import start_client
 
