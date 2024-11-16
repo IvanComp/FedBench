@@ -17,24 +17,31 @@ from flwr.server import (
     ServerAppComponents,
     start_server
 )
+from io import BytesIO
 from flwr.server.strategy import Strategy
 from flwr.server.client_manager import ClientManager
 from flwr.server.client_proxy import ClientProxy
 from prometheus_client import Gauge, start_http_server
 from flwr.common.logger import log
-from logging import INFO
 from taskA import Net as NetA, get_weights as get_weights_A
 import time
+from flwr.common.logger import log
+from logging import INFO
 import csv
 import os
+import numpy as np
 import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
 from APClient import ClientRegistry
 import psutil
+import zlib
+import pickle
 import docker
 
+MessageCompressorClientServer = True
+MessageCompressorServerClient = True
 client_registry = ClientRegistry()
 
 global_metrics = {
@@ -59,7 +66,7 @@ with open(csv_file, 'w', newline='') as file:
     writer = csv.writer(file)
     writer.writerow([
         'Client ID', 'FL Round', 'Training Time', 'Communication Time', 'Total Client Time',
-        'CPU Number', 'Task', 'Train Loss', 'Train Accuracy', 'Train F1',
+        'CPU Usage (%)', 'Task', 'Train Loss', 'Train Accuracy', 'Train F1',
         'Val Loss', 'Val Accuracy', 'Val F1', 'Total Time of Training Round', 'Total Time of FL Round'
     ])
 
@@ -116,10 +123,8 @@ def preprocess_csv():
     task_order = ['taskA', 'taskB']
     df['Task'] = pd.Categorical(df['Task'], categories=task_order, ordered=True)
     df.sort_values(by=['FL Round', 'Task', 'Client Number'], inplace=True)
-    df.drop(columns=['Client Number'], inplace=True)  
+    df.drop(columns=['Client Number'], inplace=True) 
     df.to_csv(csv_file, index=False)
-    sns.set_theme(style="ticks")
-    df = pd.read_csv(csv_file)
 
 def weighted_average_global(metrics, task_type, srt1, srt2, time_between_rounds):
     examples = [num_examples for num_examples, _ in metrics]
@@ -169,7 +174,7 @@ def weighted_average_global(metrics, task_type, srt1, srt2, time_between_rounds)
             if not client_registry.is_registered(client_id):
                 client_registry.register_client(client_id, model_type)
           
-            srt2 = time_between_rounds           
+            srt2 = time_between_rounds
             total_time = training_time + communication_time
             client_data_list.append((client_id, training_time, communication_time, total_time, cpu_usage, model_type, srt1, srt2))
 
@@ -196,14 +201,14 @@ parametersA = ndarrays_to_parameters(get_weights_A(NetA()))
 def print_results():
     clients_taskA = [cid for cid, model in client_model_mapping.items() if model == "taskA" and len(cid) <= 12]
 
-    print(f"\nResults for round {currentRnd}:")
+    print(f"\nResults for Round {currentRnd}:")
     print(f"  Clients: {clients_taskA}")
     print(f"  Train loss: {global_metrics['taskA']['train_loss']}")
     print(f"  Train accuracy: {global_metrics['taskA']['train_accuracy']}")
     print(f"  Train F1: {global_metrics['taskA']['train_f1']}")
     print(f"  Val loss: {global_metrics['taskA']['val_loss']}")
     print(f"  Val accuracy: {global_metrics['taskA']['val_accuracy']}")
-    print(f"  Val F1: {global_metrics['taskA']['val_f1']}")
+    print(f"  Val F1: {global_metrics['taskA']['val_f1']}\n")
 
 client_model_mapping = {}
 previous_round_end_time = time.time() 
@@ -214,36 +219,64 @@ class MultiModelStrategy(Strategy):
 
     def initialize_parameters(self, client_manager: ClientManager) -> Optional[Parameters]:
         return None
-
-
+    
     def configure_fit(
-        self,
-        server_round: int,
-        parameters: Parameters,
-        client_manager: ClientManager,
-    ) -> List[Tuple[ClientProxy, FitIns]]:
+            self,
+            server_round: int,
+            parameters: Parameters,
+            client_manager: ClientManager,
+        ) -> List[Tuple[ClientProxy, FitIns]]:
         
         client = docker.from_env()
-        clienthigh_count = len(client.containers.list(filters={"label": "type=clienthigh"}))
-        clientlow_count = len(client.containers.list(filters={"label": "type=clientlow"}))
-        min_clients = clienthigh_count + clientlow_count
+        client_count = len(client.containers.list(filters={"label": "type=client"}))
+        min_clients = client_count
+
+        time.sleep(3)
+        log(INFO, f"The Message Compressor is enabled for this experiment...")
+        time.sleep(5)
+        log(INFO, f"Compression library: zlib (1.3.1 version)")
+        time.sleep(5)
 
         client_manager.wait_for(min_clients) 
-        time.sleep(3)
-        log(INFO, f"Message Compressor is disabled for this experiment...")
-        time.sleep(5)
-        
-        clients = client_manager.sample(num_clients=min_clients)
 
+        clients = client_manager.sample(num_clients=min_clients)
         fit_configurations = []
 
+        if MessageCompressorServerClient:
+            fake_tensors = []
+            for tensor in self.parameters_a.tensors:
+                buffer = BytesIO(tensor)
+                loaded_array = np.load(buffer)
+                
+                reduced_shape = tuple(max(dim // 10, 1) for dim in loaded_array.shape)
+                fake_array = np.zeros(reduced_shape, dtype=loaded_array.dtype)
+                
+                fake_serialized = BytesIO()
+                np.save(fake_serialized, fake_array)
+                fake_serialized.seek(0)
+                fake_tensors.append(fake_serialized.read())
+
+            fake_parameters = Parameters(tensors=fake_tensors, tensor_type=self.parameters_a.tensor_type)
+
+            serialized_parameters = pickle.dumps(self.parameters_a)
+            original_size = len(serialized_parameters)  
+            compressed_parameters = zlib.compress(serialized_parameters)
+            compressed_size = len(compressed_parameters) 
+            compressed_parameters_hex = compressed_parameters.hex()
+
+            reduction_bytes = original_size - compressed_size
+            reduction_percentage = (reduction_bytes / original_size) * 100
+
+            print(f"Compression from Server to Client: reduction of {reduction_bytes} bytes, {reduction_percentage:.2f}%")
+
         for client in clients:
-
-            fit_ins = FitIns(self.parameters_a, {})
-            model_type = "taskA"
-
-            client_model_mapping[client.cid] = model_type
-
+            client_id = client.cid                          
+            client_model_mapping[client_id] = "taskA"
+            if MessageCompressorServerClient:
+                fit_ins = FitIns(fake_parameters, {"compressed_parameters_hex": compressed_parameters_hex})
+            else:
+                fit_ins = FitIns(self.parameters_a, {})
+        
             fit_configurations.append((client, fit_ins))
 
         return fit_configurations
@@ -254,7 +287,7 @@ class MultiModelStrategy(Strategy):
         results: List[Tuple[ClientProxy, FitRes]],
         failures: List[BaseException],
     ) -> Optional[Tuple[Parameters, Dict[str, Scalar]]]:
-
+        from logging import INFO       
         global previous_round_end_time
 
         if previous_round_end_time is not None:
@@ -266,6 +299,7 @@ class MultiModelStrategy(Strategy):
                 log(INFO, f"Results Aggregated in {time_between_rounds:.2f} seconds")
      
         results_a = []
+        results_b = []
         training_times = []
         global currentRnd
         currentRnd += 1
@@ -277,11 +311,17 @@ class MultiModelStrategy(Strategy):
             client_id = fit_res.metrics.get("client_id")
             model_type = fit_res.metrics.get("model_type")
             training_time = fit_res.metrics.get("training_time")
+            compressed_parameters_hex = fit_res.metrics.get("compressed_parameters_hex")
 
             client_model_mapping[client_id] = model_type
 
+            if MessageCompressorClientServer:            
+                compressed_parameters = bytes.fromhex(compressed_parameters_hex)
+                decompressed_parameters = pickle.loads(zlib.decompress(compressed_parameters))
+                fit_res.parameters = ndarrays_to_parameters(decompressed_parameters)
+
             if training_time is not None:
-                training_times.append(training_time)              
+                training_times.append(training_time) 
 
             if model_type == "taskA":
                 results_a.append((fit_res.parameters, fit_res.num_examples, fit_res.metrics))
@@ -293,7 +333,7 @@ class MultiModelStrategy(Strategy):
         if results_a:
             srt1 = max(training_times)
             self.parameters_a = self.aggregate_parameters(results_a, "taskA", srt1, srt2, time_between_rounds)
- 
+
         metrics_aggregated = {
             "taskA": {
                 "train_loss": global_metrics["taskA"]["train_loss"][-1] if global_metrics["taskA"]["train_loss"] else None,
@@ -329,7 +369,7 @@ class MultiModelStrategy(Strategy):
         weighted_average_global(metrics, task_type, srt1, srt2, time_between_rounds)
 
         return ndarrays_to_parameters(new_weights)
-    
+
     def configure_evaluate(
         self,
         server_round: int,
@@ -354,8 +394,8 @@ class MultiModelStrategy(Strategy):
         return None
 
 if __name__ == "__main__":
-
-    start_http_server(8000)    
+    start_http_server(8000)
+    
     strategy = MultiModelStrategy(
         initial_parameters_a=parametersA,  
     )
