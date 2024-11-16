@@ -2,7 +2,7 @@
 
 This folder contains scripts, data, and [experimental results](https://github.com/IvanComp/AP4Fed/blob/main/Experiments%20Results/1ClientSelector.ipynb) of the Client Selector architectural pattern.
 
-It is possible to replicate the same experiments proposed in the paper or run the experiments by considering different input parameters (see [section](#how-to-run-customized-experiments)).
+It is possible to replicate the same experiments proposed in the paper or run the experiments by considering different input parameters (see [section](#how-to-run-custom-experiments)).
 
 ```bash
 $ tree .
@@ -20,7 +20,7 @@ In the following, there are the input parameters for the Client Selector archite
 | `NUM_ROUNDS` | 10 | Number of Federated Learning rounds. |
 | `nS` | 1 | Number of Server. Container name: server|
 | `nC` | 4 | Number of Clients. Container name: **clienthigh** = High-Spec clients, <br> **clientlow** = Low-Spec clients|
-| `n_CPU` | 2 for High-Spec clients,<br> 1 for Low-Spec clients | - | Number of physical CPU cores allocated to each container |
+| `n_CPU` | 2 for High-Spec clients,<br> 1 for Low-Spec clients | Number of physical CPU cores allocated to each container |
 | `RAM` | 2GB | Memory capacity allocated to each container |
 | `Selection Strategy` | Resource-based | The Selection Strategy will include/exclude clients based on their computational capabilities |
 | `Selection Criteria` | Number of CPU > 1 | The Selector Criteria will evaluate clients based on their number of CPU |
@@ -53,7 +53,7 @@ NUM_ROUNDS=10 docker-compose up --scale clienthigh=3 --scale clientlow=1
    <br> Note that **different values may be observed because of the stochastic nature of the simulation**. 
 
 
-# How to run Customized Experiments
+# How to run Custom Experiments
 
 Users can also customize input parameters to investigate the architectural pattern performance considering different settings.
 All of the input parameters can be varied by changing the corresponding values from the command line before starting the project, For example:
