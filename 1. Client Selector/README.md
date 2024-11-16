@@ -7,8 +7,8 @@ It is possible to replicate the same experiments proposed in the paper or run th
 ```bash
 $ tree .
 .
-├── /1. Without Client Selector  
-├── /2. With Client Selector      
+├── /1. With Client Selector  
+├── /2. Without Client Selector      
 ```
 
 # Input Parameters

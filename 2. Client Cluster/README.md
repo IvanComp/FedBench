@@ -7,8 +7,8 @@ It is possible to replicate the same experiments proposed in the paper or run th
 ```bash
 $ tree .
 .
-├── /1. Without Client Cluster  
-├── /2. With Client Cluster      
+├── /1. With Client Cluster  
+├── /2. Without Client Cluster      
 ```
 
 # Input Parameters

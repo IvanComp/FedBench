@@ -7,8 +7,8 @@ It is possible to replicate the same experiments proposed in the paper or run th
 ```bash
 $ tree .
 .
-├── /1. Without Message Compressor 
-├── /2. With Message Compressor      
+├── /1. With Message Compressor 
+├── /2. Without Message Compressor      
 ```
 
 # Input Parameters
@@ -36,7 +36,7 @@ In the following, there are the input parameters for the Message Compressor arch
 | `FC 1` | 60 units | 120 units | 240 units |
 | `FC 2` | 42 units | 84 units | 168 units |
 | `FC 3` | 10 units | 20 units | 30 units |
-| `Batch Size` | 32 | x | y |
+| `Batch Size` | 32 | 32 | 32 |
 | `Learning Rate` | 0.001 | 0.001 | 0.001 |
 | `Optimizer` | SGD | SGD | SGD |
 
