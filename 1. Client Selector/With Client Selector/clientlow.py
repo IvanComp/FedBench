@@ -5,6 +5,8 @@ from flwr.common import (
     Scalar,
     Context,
 )
+from flwr.common.logger import log
+from logging import INFO
 from typing import Dict
 import time
 from datetime import datetime
@@ -14,8 +16,6 @@ import hashlib
 import psutil
 import random
 import torch
-from flwr.common.logger import log
-from logging import INFO
 from taskA import (
     DEVICE as DEVICE_A,
     Net as NetA,
@@ -40,20 +40,27 @@ class FlowerClient(NumPyClient):
         self.cid = cid  
         self.model_type = "taskA"
         self.net = NetA().to(DEVICE_A)
-        self.trainloader, self.testloader = load_data_A(cid)  
+        self.trainloader, self.testloader = load_data_A()  
         self.device = DEVICE_A
 
         client_registry.register_client(cid, model_type)
 
     def fit(self, parameters, config):
         #print(f"CLIENT {self.cid} Successfully Configured. Target Model: {self.model_type}", flush=True)
+        n_cpu = query_cpu()
 
-        n_cpu = query_cpu()        
+        if n_cpu < 2:
+            log(INFO, f"Client {self.cid} has less than 2 CPUs ({n_cpu}). It will not participate in the FL round.")
+            log(INFO, f"Preparing empty reply")
+            return parameters, 0, {} 
+        
         set_weights_A(self.net, parameters)
         results, training_time, start_comm_time = train_A(self.net, self.trainloader, self.testloader, epochs=1, device=self.device)       
+        communication_start_time = time.time()
 
         new_parameters = get_weights_A(self.net)
 
+        cpu_end = psutil.cpu_percent(interval=None)
         cpu_usage = n_cpu
 
         metrics = {
@@ -69,6 +76,7 @@ class FlowerClient(NumPyClient):
             "client_id": self.cid,
             "model_type": self.model_type,
             "start_comm_time": start_comm_time,
+            "communication_start_time": communication_start_time,
         }
 
         return new_parameters, len(self.trainloader.dataset), metrics
@@ -96,7 +104,7 @@ def query_cpu():
         cpu_quota = os.cpu_count()
 
     return cpu_quota
-        
+
 if __name__ == "__main__":
     from flwr.client import start_client
 

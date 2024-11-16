@@ -7,8 +7,8 @@ It is possible to replicate the same experiments proposed in the paper or run th
 ```bash
 $ tree .
 .
-├── /1. With Client Selector  
-├── /2. Without Client Selector      
+├── /With Client Selector  
+├── /Without Client Selector      
 ```
 
 # Input Parameters
@@ -41,10 +41,10 @@ docker compose build
 #Launch Docker Compose Configuration. Please chose one of the following configurations based on the folder:
 
 #For Configuration A (1 Server, 4 Clients with "High" specifications) -- Without Client Selector pattern
-NUM_ROUNDS=10 docker-compose up --scale clientahigh=4 --scale clientalow=0
+NUM_ROUNDS=10 docker-compose up --scale clienthigh=4 --scale clientlow=0
 
 #For Configuration B (1 Server, 3 Clients A with "High" specifications, 1 Client with "Low" specifications) -- Without Client Selector pattern
-NUM_ROUNDS=10 docker-compose up --scale clientahigh=3 --scale clientalow=1
+NUM_ROUNDS=10 docker-compose up --scale clienthigh=3 --scale clientlow=1
 
 #For Configuration C (1 Server, 3 Clients A with "High" specifications, 1 Client A with "Low" specifications) -- With Client Selector pattern
 NUM_ROUNDS=10 docker-compose up --scale clienthigh=3 --scale clientlow=1

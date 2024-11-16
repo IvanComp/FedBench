@@ -40,7 +40,7 @@ class FlowerClient(NumPyClient):
         self.cid = cid  
         self.model_type = "taskA"
         self.net = NetA().to(DEVICE_A)
-        self.trainloader, self.testloader = load_data_A(cid)  
+        self.trainloader, self.testloader = load_data_A()  
         self.device = DEVICE_A
 
         client_registry.register_client(cid, model_type)

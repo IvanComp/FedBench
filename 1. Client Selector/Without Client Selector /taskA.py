@@ -21,74 +21,27 @@ class Net(nn.Module):
 
     def __init__(self) -> None:
         super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(3, 6, 5)
+        self.conv1 = nn.Conv2d(3, 3, 5)  
         self.pool = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(6, 16, 5)
-        self.fc1 = nn.Linear(16 * 5 * 5, 120)
-        self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 10)
+        self.conv2 = nn.Conv2d(3, 8, 5)  
+        self.fc1 = nn.Linear(8 * 5 * 5, 60)  
+        self.fc2 = nn.Linear(60, 42)  
+        self.fc3 = nn.Linear(42, 10)  
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
-        x = x.view(-1, 16 * 5 * 5)
+        x = x.view(-1, 8 * 5 * 5)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         return self.fc3(x)
 
-def load_data(min_samples=25000, max_samples=27000, alpha=0.5):
+def load_data():
+    """Load CIFAR-10 (training and test set)."""
     trf = Compose([ToTensor(), Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-    trainset = CIFAR10("./data", train=True, download=True, transform=trf)
-    testset = CIFAR10("./data", train=False, download=True, transform=trf)
-
-    # Crea un dizionario di indici per ogni classe nel dataset di training
-    class_to_indices = {i: [] for i in range(10)}
-    for idx, (_, label) in enumerate(trainset):
-        class_to_indices[label].append(idx)
-
-    # Calcola le proporzioni di campioni per ogni classe usando Dirichlet
-    proportions = np.random.dirichlet([alpha] * 10)
-    class_counts = (proportions * min_samples).astype(int)
-
-    # Garantisce che la somma totale sia tra min_samples e max_samples
-    discrepancy = min_samples - class_counts.sum()
-    if discrepancy > 0:
-        class_counts[np.argmax(proportions)] += discrepancy
-    elif discrepancy < 0:
-        discrepancy = abs(discrepancy)
-        class_counts[np.argmax(proportions)] -= min(discrepancy, class_counts[np.argmax(proportions)])
-
-    # Se la somma è inferiore a min_samples, distribuisce l'eccesso fino al limite max_samples
-    while class_counts.sum() < min_samples:
-        increment = min(max_samples - class_counts.sum(), np.random.randint(1, 100))
-        class_counts[np.argmax(proportions)] += increment
-
-    # Seleziona campioni casuali per ogni classe secondo il conteggio corretto
-    selected_indices = []
-    for cls, count in enumerate(class_counts):
-        available_indices = class_to_indices[cls]
-        selected = random.sample(available_indices, min(count, len(available_indices)))
-        selected_indices.extend(selected)
-
-    # Creazione del subset per il client
-    subset_train = Subset(trainset, selected_indices)
-    trainloader = DataLoader(subset_train, batch_size=32, shuffle=True)
-    testloader = DataLoader(testset, batch_size=32, shuffle=False)
-
-    # Calcola la distribuzione effettiva delle classi nel subset del client
-    subset_labels = [trainset[i][1] for i in selected_indices]
-    class_distribution = Counter(subset_labels)
-    class_names = trainset.classes
-
-    # Stampa la distribuzione per ogni client
-    print(f"Client- Distribuzione delle classi:")
-    for class_index, count in class_distribution.items():
-        print(f"  {class_names[class_index]}: {count} campioni")
-
-    # Verifica la somma totale
-    print(f"Totale campioni per Client: {len(selected_indices)}")
-
-    return trainloader, testloader
+    trainset = CIFAR10("./", train=True, download=True, transform=trf)
+    testset = CIFAR10("./", train=False, download=True, transform=trf)
+    return DataLoader(trainset, batch_size=32, shuffle=True), DataLoader(testset)
 
 def train(net, trainloader, valloader, epochs, device):
 

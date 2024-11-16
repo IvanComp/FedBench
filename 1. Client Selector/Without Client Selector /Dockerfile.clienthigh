@@ -16,10 +16,6 @@ COPY server.py /app/server.py
 COPY taskA.py /app/taskA.py
 COPY APClient.py /app/APClient.py
 COPY performance/ /app/performance/
-COPY data/ /app/data/
-
-# Create the folder for data
-RUN mkdir -p data
 
 # Execution command
 CMD ["python", "clienthigh.py"]
