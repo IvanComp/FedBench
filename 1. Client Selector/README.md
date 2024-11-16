@@ -7,8 +7,8 @@ It is possible to replicate the same experiments proposed in the paper or run th
 ```bash
 $ tree .
 .
-├── /1. Without Client Selector   # <-- contains Configurations A and B to replicate experiments 
-├── /2. With Client Selector      # <-- contains Configurations C to replicate experiment 
+├── /1. Without Client Selector  
+├── /2. With Client Selector      
 ```
 
 # Input Parameters
