@@ -6,9 +6,6 @@ services:
     container_name: flwr_server
     ports:
       - "8080:8080"
-    #depends_on:
-    # - prometheus
-    # - grafana
     volumes:
       - ./data:/app/data
       - ./performance:/app/performance
@@ -28,6 +25,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.clienta
+    labels:
+      - "type=clienta"
     depends_on:
       - server
     networks:
@@ -45,6 +44,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.clientb
+    labels:
+      - "type=clientb"
     depends_on:
       - server
     networks:

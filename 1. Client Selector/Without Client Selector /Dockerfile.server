@@ -11,8 +11,8 @@ RUN pip install docker flwr[simulations] flwr-datasets[vision] torch==2.2.1 torc
 WORKDIR /app
 
 # Copy the server code
-COPY clientlow.py /app/clientlow.py
-COPY clienthigh.py /app/clienthigh.py
+COPY clientb.py /app/clientb.py
+COPY clienta.py /app/clienta.py
 COPY server.py /app/server.py
 COPY taskA.py /app/taskA.py
 COPY APClient.py /app/APClient.py

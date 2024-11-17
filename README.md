@@ -8,7 +8,7 @@ version: [1.0.0]
 # Open Science Artifact: Performance Analysis of Architectural Patterns for Federated Learning Systems
 
 <p align="center">
-<img src="img/logoNew.svg" width="360px" height="200px"/>
+<img src="img/logoNew.svg" width="380px" height="200px"/>
 </p>
 <img src="https://img.shields.io/badge/version-1.0-green" alt="Version">
 

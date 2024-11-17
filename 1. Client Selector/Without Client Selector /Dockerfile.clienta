@@ -11,7 +11,7 @@ RUN pip install flwr[simulations] flwr-datasets[vision] torch==2.2.1 torchvision
 WORKDIR /app
 
 # Copy the client code
-COPY clienthigh.py /app/clienthigh.py
+COPY clienta.py /app/clienta.py
 COPY server.py /app/server.py
 COPY taskA.py /app/taskA.py
 COPY APClient.py /app/APClient.py
