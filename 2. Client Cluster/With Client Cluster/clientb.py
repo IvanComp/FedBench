@@ -27,8 +27,6 @@ from taskB import (
 from APClient import ClientRegistry
 
 CLIENT_ID = os.getenv("HOSTNAME")
-
-# Instantiate a single instance of ClientRegistry for the client
 client_registry = ClientRegistry()
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -44,7 +42,6 @@ class FlowerClient(NumPyClient):
         client_registry.register_client(cid, model_type)
 
     def fit(self, parameters, config):
-        #print(f"CLIENT {self.cid} Successfully Configured. Target Model: {self.model_type}", flush=True)
         cpu_start = psutil.cpu_percent(interval=None)
         
         set_weights_B(self.net, parameters)

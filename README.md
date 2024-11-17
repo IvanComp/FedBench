@@ -52,7 +52,7 @@ $ tree .
 ├── /1. Client Selector      # <-- contains `Client Selector` experiments
 ├── /2. Client Clustering    # <-- contains `Client Cluster` experiments
 ├── /3. Message Compressor   # <-- contains `Message Compressor` experiments
-├── Experiments Results      # <-- contains a set of charts for the visualization of the results
+├── Experiments Results      # <-- contains 3 jupyter notebooks for the visualizaiton of the results
 └── README.md                # <-- README file
 ```
 

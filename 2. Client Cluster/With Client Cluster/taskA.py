@@ -36,10 +36,9 @@ class Net(nn.Module):
 
 def load_data():
     trf = Compose([ToTensor(), Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-    trainset = CIFAR10("./data", train=True, download=True, transform=trf)
-    testset = CIFAR10("./data", train=False, download=True, transform=trf)
+    trainset = CIFAR10("./", train=True, download=True, transform=trf)
+    testset = CIFAR10("./", train=False, download=True, transform=trf)
 
-    # Crea un dizionario per raccogliere 2.500 campioni per ciascuna classe
     class_to_indices = {i: [] for i in range(10)}
     for idx, (_, label) in enumerate(trainset):
         if len(class_to_indices[label]) < 2500:
@@ -63,14 +62,13 @@ def load_data():
     class_names = trainset.classes
 
     # Stampa la distribuzione effettiva delle classi
-    print("Distribuzione effettiva delle classi per Task A:")
+    print("Class Distribution:")
     for class_index, count in class_counts.items():
-        print(f"  {class_names[class_index]}: {count} campioni")
+        print(f"  {class_names[class_index]}: {count} samples")
 
     return trainloader, testloader
 
 def train(net, trainloader, valloader, epochs, device):
-    """Train the model on the training set, measuring time."""
     log(INFO, "Starting training...")
 
     # Start measuring training time

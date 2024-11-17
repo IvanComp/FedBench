@@ -45,19 +45,15 @@ def count_classes_subset(dataset, subset_indices):
 
 def load_data(min_samples=25000, max_samples=27000, alpha=0.5):
     trf = Compose([ToTensor(), Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-    trainset = CIFAR10("./data", train=True, download=True, transform=trf)
-    testset = CIFAR10("./data", train=False, download=True, transform=trf)
+    trainset = CIFAR10("./", train=True, download=True, transform=trf)
+    testset = CIFAR10("./", train=False, download=True, transform=trf)
 
-    # Crea un dizionario di indici per ogni classe nel dataset di training
     class_to_indices = {i: [] for i in range(10)}
     for idx, (_, label) in enumerate(trainset):
         class_to_indices[label].append(idx)
 
-    # Calcola le proporzioni di campioni per ogni classe usando Dirichlet
     proportions = np.random.dirichlet([alpha] * 10)
     class_counts = (proportions * min_samples).astype(int)
-
-    # Garantisce che la somma totale sia tra min_samples e max_samples
     discrepancy = min_samples - class_counts.sum()
     if discrepancy > 0:
         class_counts[np.argmax(proportions)] += discrepancy
@@ -65,35 +61,28 @@ def load_data(min_samples=25000, max_samples=27000, alpha=0.5):
         discrepancy = abs(discrepancy)
         class_counts[np.argmax(proportions)] -= min(discrepancy, class_counts[np.argmax(proportions)])
 
-    # Se la somma è inferiore a min_samples, distribuisce l'eccesso fino al limite max_samples
     while class_counts.sum() < min_samples:
         increment = min(max_samples - class_counts.sum(), np.random.randint(1, 100))
         class_counts[np.argmax(proportions)] += increment
 
-    # Seleziona campioni casuali per ogni classe secondo il conteggio corretto
     selected_indices = []
     for cls, count in enumerate(class_counts):
         available_indices = class_to_indices[cls]
         selected = random.sample(available_indices, min(count, len(available_indices)))
         selected_indices.extend(selected)
 
-    # Creazione del subset per il client
     subset_train = Subset(trainset, selected_indices)
     trainloader = DataLoader(subset_train, batch_size=32, shuffle=True)
     testloader = DataLoader(testset, batch_size=32, shuffle=False)
-
-    # Calcola la distribuzione effettiva delle classi nel subset del client
     subset_labels = [trainset[i][1] for i in selected_indices]
     class_distribution = Counter(subset_labels)
     class_names = trainset.classes
 
-    # Stampa la distribuzione per ogni client
-    print(f"Client - Distribuzione delle classi:")
+    print(f"Class Distribution:")
     for class_index, count in class_distribution.items():
-        print(f"  {class_names[class_index]}: {count} campioni")
+        print(f"  {class_names[class_index]}: {count} samples")
 
-    # Verifica la somma totale
-    print(f"Totale campioni per Client: {len(selected_indices)}")
+    #print(f"Total Client samples: {len(selected_indices)}")
 
     return trainloader, testloader
 
@@ -101,10 +90,8 @@ def train(net, trainloader, valloader, epochs, device):
 
     log(INFO, "Starting training...")
 
-    # Start measuring training time
     start_time = time.time()
-
-    net.to(device)  # sposta il modello sulla GPU se disponibile
+    net.to(device) 
     criterion = torch.nn.CrossEntropyLoss().to(device)
     optimizer = torch.optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
     net.train()
@@ -116,7 +103,6 @@ def train(net, trainloader, valloader, epochs, device):
             loss.backward()
             optimizer.step()
 
-    # End measuring training time
     training_time = time.time() - start_time
     log(INFO, f"Training completed in {training_time:.2f} seconds")
     comm_start_time = time.time()
@@ -157,23 +143,19 @@ def test(net, testloader):
 
     accuracy = correct / len(testloader.dataset)
 
-    # Concatenare tutte le predizioni e le etichette
     all_preds = torch.cat(all_preds)
     all_labels = torch.cat(all_labels)
-
-    # Calcolo dell'F1 score
     f1 = f1_score_torch(all_labels, all_preds, num_classes=10, average='macro')
 
     return loss, accuracy, f1
 
 
 def f1_score_torch(y_true, y_pred, num_classes, average='macro'):
-    # Creazione della matrice di confusione
+
     confusion_matrix = torch.zeros(num_classes, num_classes)
     for t, p in zip(y_true, y_pred):
         confusion_matrix[t.long(), p.long()] += 1
 
-    # Calcolo di precision e recall per ogni classe
     precision = torch.zeros(num_classes)
     recall = torch.zeros(num_classes)
     f1_per_class = torch.zeros(num_classes)

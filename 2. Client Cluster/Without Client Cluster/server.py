@@ -24,6 +24,8 @@ from prometheus_client import Gauge, start_http_server
 from flwr.common.logger import log
 from taskA import Net as NetA, get_weights as get_weights_A
 from taskB import Net as NetB, get_weights as get_weights_B
+from flwr.common.logger import log
+from logging import INFO
 import time
 import csv
 import os
@@ -33,6 +35,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from APClient import ClientRegistry
 import psutil
+import docker
 
 client_registry = ClientRegistry()
 
@@ -41,7 +44,6 @@ global_metrics = {
     "taskB": {"train_loss": [], "train_accuracy": [], "train_f1": [],"val_loss": [], "val_accuracy": [], "val_f1": []},
 }
 
-# Set the non-interactive backend of matplotlib
 matplotlib.use('Agg')
 current_dir = os.path.abspath(os.path.dirname(__file__))
 
@@ -99,23 +101,12 @@ def log_round_time(client_id, fl_round, training_time, communication_time, total
 def preprocess_csv():
     import pandas as pd
 
-    # Leggi il CSV esistente
     df = pd.read_csv(csv_file)
-
-    # Assicurati che 'Training Time' sia numerico
     df['Training Time'] = pd.to_numeric(df['Training Time'], errors='coerce')
-
-    # Assicurati che 'Total Time of FL Round' sia numerico
     df['Total Time of FL Round'] = pd.to_numeric(df['Total Time of FL Round'], errors='coerce')
-
-    # Propaga 'Total Time of FL Round' a tutti i client nel loro FL Round
-    # Se 'Total Time of FL Round' è presente solo per alcuni client, usiamo il valore massimo per ogni FL Round
     df['Total Time of FL Round'] = df.groupby('FL Round')['Total Time of FL Round'].transform('max')
-
-    # Calcola 'Total Client Time'
     df['Total Client Time'] = df['Training Time'] + df['Communication Time']
 
-    # Map client IDs per task
     unique_tasks = df['Task'].unique()
     client_mappings = {}
     for task in unique_tasks:
@@ -126,139 +117,12 @@ def preprocess_csv():
             client_mappings[old_id] = client_id_new
 
     df['Client ID'] = df['Client ID'].map(client_mappings)
-
-    # Estrai il numero del client per l'ordinamento
     df['Client Number'] = df['Client ID'].str.extract(r'Client (\d+)').astype(int)
-
-    # Ordina 'Task' con 'taskA' prima di 'taskB'
     task_order = ['taskA', 'taskB']
     df['Task'] = pd.Categorical(df['Task'], categories=task_order, ordered=True)
-
-    # Ordina il DataFrame
     df.sort_values(by=['FL Round', 'Task', 'Client Number'], inplace=True)
-    df.drop(columns=['Client Number'], inplace=True)  # Rimuovi la colonna di supporto
-
-    # Salva il DataFrame aggiornato nel CSV
+    df.drop(columns=['Client Number'], inplace=True)  
     df.to_csv(csv_file, index=False)
-
-# Update graph generation functions to accommodate new Client IDs
-def generate_performance_graphs():
-    sns.set_theme(style="ticks")
-
-    df = pd.read_csv(csv_file)
-
-    # No need to remap client IDs here as it's already done
-    df = df.reset_index(drop=True)
-    df[['Training Time', 'Communication Time', 'Total Client Time']] = df[['Training Time', 'Communication Time', 'Total Client Time']].round(2)
-
-    plt.figure(figsize=(12, 6))
-    df_melted = df.melt(id_vars=["Client ID"], value_vars=["Training Time", "Communication Time", "Total Client Time"],
-                        var_name="Metric", value_name="Time (seconds)")
-    sns.barplot(x="Metric", y="Time (seconds)", hue="Client ID", data=df_melted)
-    plt.title('Performance Metrics per Client', fontweight='bold')
-    plt.ylabel('Time (seconds)', fontweight='bold')
-    plt.legend(title='Client ID', title_fontsize='13', fontsize='10', loc='best', frameon=True)
-    plt.tight_layout()
-
-    graph_path = os.path.join(performance_dir, 'performance_metrics.pdf')
-    print(f"Saving the graph to: {graph_path}")  
-    plt.savefig(graph_path, format="pdf")
-    plt.close()
-
-def generate_total_time_graph():
-    sns.set_theme(style="ticks")
-    df = pd.read_csv(csv_file)
-
-    plt.figure(figsize=(12, 6))
-    sns.lineplot(x='FL Round', y='Total Client Time', hue='Client ID', data=df, marker="o", markersize=8)
-    plt.title('Total Client Time per Round', fontweight='bold')
-    plt.ylabel('Total Time (seconds)', fontweight='bold')
-    plt.xlabel('FL Round', fontweight='bold')
-    min_round = df['FL Round'].min()
-    max_round = df['FL Round'].max()
-    plt.xticks(range(min_round, max_round + 1))
-    plt.tight_layout()
-
-    line_graph_path = os.path.join(performance_dir, 'totalTime_round.pdf')
-    print(f"Saving the graph to: {line_graph_path}")
-    plt.savefig(line_graph_path, format="pdf")
-    plt.close()
-
-# Function to generate CPU usage graph
-def generate_cpu_usage_graph():
-    sns.set_theme(style="ticks")
-    df = pd.read_csv(csv_file)
-
-    plt.figure(figsize=(12, 6))
-    sns.barplot(x="Client ID", y="CPU Usage (%)", data=df)
-    plt.title('CPU Usage per Client', fontweight='bold')
-    plt.ylabel('CPU Usage (%)', fontweight='bold')
-    plt.xlabel('Client ID', fontweight='bold')
-    plt.tight_layout()
-
-    cpu_graph_path = os.path.join(performance_dir, 'cpu_usage_per_client.pdf')
-    print(f"Saving the graph to: {cpu_graph_path}")
-    plt.savefig(cpu_graph_path, format="pdf")
-    
-    if os.path.exists(cpu_graph_path):
-        print(f"The graph was successfully created in {cpu_graph_path}")
-    else:
-        print(f"Error: the file {cpu_graph_path} was not created.")
-        
-    plt.close()
-
-# Function to generate training time graph
-def generate_training_time_graph():
-    sns.set_theme(style="ticks")
-    df = pd.read_csv(csv_file)
-
-    plt.figure(figsize=(12, 6))
-    sns.lineplot(x='FL Round', y='Training Time', hue='Client ID', data=df, marker="o", markersize=8)
-    plt.title('Training Time per Round per Client', fontweight='bold')
-    plt.ylabel('Training Time (seconds)', fontweight='bold')
-    plt.xlabel('FL Round', fontweight='bold')
-    min_round = df['FL Round'].min()
-    max_round = df['FL Round'].max()
-    plt.xticks(range(min_round, max_round + 1))
-    plt.tight_layout()
-
-    line_graph_path = os.path.join(performance_dir, 'trainingTime_round.pdf')
-    print(f"Saving the graph to: {line_graph_path}")
-    plt.savefig(line_graph_path, format="pdf")
-    
-    if os.path.exists(line_graph_path):
-        print(f"The graph was successfully created in {line_graph_path}")
-    else:
-        print(f"Error: the file {line_graph_path} was not created.")
-        
-    plt.close()
-
-# Function to generate communication time graph
-def generate_communication_time_graph():
-    sns.set_theme(style="ticks")
-    df = pd.read_csv(csv_file)
-
-    plt.figure(figsize=(12, 6))
-    sns.lineplot(x='FL Round', y='Communication Time', hue='Client ID', data=df, marker="o", markersize=8)
-    plt.title('Communication Time per Round per Client', fontweight='bold')
-    plt.ylabel('Communication Time (seconds)', fontweight='bold')
-    plt.xlabel('FL Round', fontweight='bold')
-    min_round = df['FL Round'].min()
-    max_round = df['FL Round'].max()
-    plt.xticks(range(min_round, max_round + 1))
-
-    plt.tight_layout()
-
-    line_graph_path = os.path.join(performance_dir, 'communicationTime_round.pdf')
-    print(f"Saving the graph to: {line_graph_path}")
-    plt.savefig(line_graph_path, format="pdf")
-    
-    if os.path.exists(line_graph_path):
-        print(f"The graph was successfully created in {line_graph_path}")
-    else:
-        print(f"Error: the file {line_graph_path} was not created.")
-        
-    plt.close()
 
 def weighted_average_global(metrics, task_type, srt1, srt2, time_between_rounds):
     examples = [num_examples for num_examples, _ in metrics]
@@ -294,7 +158,6 @@ def weighted_average_global(metrics, task_type, srt1, srt2, time_between_rounds)
     global_metrics[task_type]["val_accuracy"].append(avg_val_accuracy)
     global_metrics[task_type]["val_f1"].append(avg_val_f1)
 
-    # Collect client data for this task
     client_data_list = []
     for num_examples, m in metrics:
         client_id = m.get("client_id")
@@ -313,7 +176,6 @@ def weighted_average_global(metrics, task_type, srt1, srt2, time_between_rounds)
             total_time = training_time + communication_time
             client_data_list.append((client_id, training_time, communication_time, total_time, cpu_usage, model_type, srt1, srt2))
 
-    # Now write the client data, setting already_logged = True for all except the last client
     num_clients = len(client_data_list)
     for idx, client_data in enumerate(client_data_list):
         client_id, training_time, communication_time, total_time, cpu_usage, model_type, srt1, srt2 = client_data
@@ -332,16 +194,15 @@ def weighted_average_global(metrics, task_type, srt1, srt2, time_between_rounds)
         "val_f1": avg_val_f1,
     }
 
-# Initialize weights separately for taskA and taskB
 parametersA = ndarrays_to_parameters(get_weights_A(NetA()))
 parametersB = ndarrays_to_parameters(get_weights_B(NetB()))
 
 def print_results():
-    # Collect clients for each task using cid
+
     clients_taskA = [cid for cid, model in client_model_mapping.items() if model == "taskA" and len(cid) <= 12]
     clients_taskB = [cid for cid, model in client_model_mapping.items() if model == "taskB" and len(cid) <= 12]
 
-    print("\nResults for Model A:")
+    print(f"\nResults for Model A, round {currentRnd}:")
     print(f"  Clients: {clients_taskA}")
     print(f"  Train loss: {global_metrics['taskA']['train_loss']}")
     print(f"  Train accuracy: {global_metrics['taskA']['train_accuracy']}")
@@ -350,7 +211,7 @@ def print_results():
     print(f"  Val accuracy: {global_metrics['taskA']['val_accuracy']}")
     print(f"  Val F1: {global_metrics['taskA']['val_f1']}")
 
-    print("\nResults for Model B:")
+    print(f"\nResults for Model B, round {currentRnd}:")
     print(f"  Clients: {clients_taskB}")
     print(f"  Train loss: {global_metrics['taskB']['train_loss']}")
     print(f"  Train accuracy: {global_metrics['taskB']['train_accuracy']}")
@@ -359,19 +220,15 @@ def print_results():
     print(f"  Val accuracy: {global_metrics['taskB']['val_accuracy']}\n")
     print(f"  Val F1: {global_metrics['taskB']['val_f1']}\n")
 
-# Initialize the client_model_mapping dictionary
 client_model_mapping = {}
-
 previous_round_end_time = time.time() 
 
-# Definition of the custom strategy
 class MultiModelStrategy(Strategy):
     def __init__(self, initial_parameters_a: Parameters, initial_parameters_b: Parameters):
         self.parameters_a = initial_parameters_a
         self.parameters_b = initial_parameters_b
 
     def initialize_parameters(self, client_manager: ClientManager) -> Optional[Parameters]:
-        # Return None because we use separate initial parameters for A and B
         return None
 
     def configure_fit(
@@ -380,21 +237,23 @@ class MultiModelStrategy(Strategy):
         parameters: Parameters,
         client_manager: ClientManager,
     ) -> List[Tuple[ClientProxy, FitIns]]:
-        min_clients = 8
+        
+        client = docker.from_env()
+        clienta_count = len(client.containers.list(filters={"label": "type=clienta"}))
+        clientb_count = len(client.containers.list(filters={"label": "type=clientb"}))
+        min_clients = clienta_count + clientb_count
 
-        client_manager.wait_for(min_clients) 
-
-        # Sample available clients after reaching the minimum number
+        client_manager.wait_for(min_clients)  
+        time.sleep(3)
+        log(INFO, f"Client Cluster is disabled for this experiment...")
+        time.sleep(5)
+        
         clients = client_manager.sample(num_clients=min_clients)
-
         fit_configurations = []
-
-        task_flag = True  # Start with True for taskA
+        task_flag = True 
 
         for i, client in enumerate(clients):
             client_id = client.cid
-
-            # Alternate between taskA and taskB
             if task_flag:
                 fit_ins = FitIns(self.parameters_a, {})
                 model_type = "taskA"
@@ -402,13 +261,8 @@ class MultiModelStrategy(Strategy):
                 fit_ins = FitIns(self.parameters_b, {})
                 model_type = "taskB"
             
-            # Alternate the flag
             task_flag = not task_flag
-            
-            # Map the model to the client
             client_model_mapping[client_id] = model_type
-
-            # Add the configuration
             fit_configurations.append((client, fit_ins))
         
         return fit_configurations
@@ -462,33 +316,31 @@ class MultiModelStrategy(Strategy):
 
         previous_round_end_time = time.time()
 
-        # Aggrega i parametri per taskA
         if results_a:
             srt1 = max(training_times)
             self.parameters_a = self.aggregate_parameters(results_a, "taskA", srt1, srt2, time_between_rounds)
 
-        # Aggrega i parametri per taskB
         if results_b:
             srt1 = max(training_times)
             self.parameters_b = self.aggregate_parameters(results_b, "taskB", srt1, srt2, time_between_rounds)
  
 
         metrics_aggregated = {
-            "taskA": {
+            "Final Results for Model A": {
                 "train_loss": global_metrics["taskA"]["train_loss"][-1] if global_metrics["taskA"]["train_loss"] else None,
                 "train_accuracy": global_metrics["taskA"]["train_accuracy"][-1] if global_metrics["taskA"]["train_accuracy"] else None,
-                "train_accuracy": global_metrics["taskA"]["train_accuracy"][-1] if global_metrics["taskA"]["train_accuracy"] else None,
+                "train_f1": global_metrics["taskA"]["train_f1"][-1] if global_metrics["taskA"]["train_f1"] else None,
                 "val_loss": global_metrics["taskA"]["val_loss"][-1] if global_metrics["taskA"]["val_loss"] else None,
                 "val_accuracy": global_metrics["taskA"]["val_accuracy"][-1] if global_metrics["taskA"]["val_accuracy"] else None,
-                "val_accuracy": global_metrics["taskA"]["val_accuracy"][-1] if global_metrics["taskA"]["val_accuracy"] else None,
+                "val_f1": global_metrics["taskA"]["val_f1"][-1] if global_metrics["taskA"]["val_f1"] else None,
             },
-            "taskB": {
+            "Final Results for Model B": {
                 "train_loss": global_metrics["taskB"]["train_loss"][-1] if global_metrics["taskB"]["train_loss"] else None,
                 "train_accuracy": global_metrics["taskB"]["train_accuracy"][-1] if global_metrics["taskB"]["train_accuracy"] else None,
-                "train_f1": global_metrics["taskA"]["train_f1"][-1] if global_metrics["taskA"]["train_f1"] else None,
+                "train_f1": global_metrics["taskB"]["train_f1"][-1] if global_metrics["taskB"]["train_f1"] else None,
                 "val_loss": global_metrics["taskB"]["val_loss"][-1] if global_metrics["taskB"]["val_loss"] else None,
                 "val_accuracy": global_metrics["taskB"]["val_accuracy"][-1] if global_metrics["taskB"]["val_accuracy"] else None,
-                "val_f1": global_metrics["taskA"]["val_f1"][-1] if global_metrics["taskA"]["val_f1"] else None,
+                "val_f1": global_metrics["taskB"]["val_f1"][-1] if global_metrics["taskB"]["val_f1"] else None,
             },
         }
 
@@ -496,17 +348,10 @@ class MultiModelStrategy(Strategy):
 
         if currentRnd == num_rounds:
             preprocess_csv()
-            print("Starting graph generation...")
-            generate_performance_graphs()
-            generate_cpu_usage_graph()
-            generate_total_time_graph()
-            generate_training_time_graph()
-            generate_communication_time_graph()
 
         return (self.parameters_a, self.parameters_b), metrics_aggregated
 
     def aggregate_parameters(self, results, task_type, srt1, srt2,time_between_rounds):
-        # Aggregate weights using weighted average based on number of examples
         total_examples = sum([num_examples for _, num_examples, _ in results])
         new_weights = None
 
@@ -514,14 +359,12 @@ class MultiModelStrategy(Strategy):
         for client_params, num_examples, client_metrics in results:
             client_weights = parameters_to_ndarrays(client_params)
             weight = num_examples / total_examples
-            #print(f"Aggregating parameters for {task_type}, num_examples: {num_examples}, weight: {weight}")
             if new_weights is None:
                 new_weights = [w * weight for w in client_weights]
             else:
                 new_weights = [nw + w * weight for nw, w in zip(new_weights, client_weights)]
             metrics.append((num_examples, client_metrics))
 
-        # Aggregate metrics
         weighted_average_global(metrics, task_type, srt1, srt2, time_between_rounds)
 
         return ndarrays_to_parameters(new_weights)
