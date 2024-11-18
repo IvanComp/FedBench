@@ -55,7 +55,7 @@ docker compose build
 
 #Launch Docker Compose Configuration. Please chose one of the following configurations based on the folder:
 
-#For Configuration 4a4b (1 Server, 8 Clients) 
+#For Configuration 8 Clients (1 Server, 8 Clients) 
 NUM_ROUNDS=10 docker-compose up --scale client=8
 ```
 4. The process of Federated Learning will start, and the progress of each round will be displayed in the terminal.
