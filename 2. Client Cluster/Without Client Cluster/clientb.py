@@ -34,7 +34,7 @@ DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 class FlowerClient(NumPyClient):
     def __init__(self, cid: str, model_type):
         self.cid = cid  
-        self.model_type = "taskB"
+        self.model_type = "taskA"
         self.net = NetB().to(DEVICE_B)
         self.trainloader, self.testloader = load_data_B()  
         self.device = DEVICE_B
@@ -86,5 +86,5 @@ if __name__ == "__main__":
 
     start_client(
         server_address="server:8080",
-        client=FlowerClient(cid=CLIENT_ID, model_type="taskB").to_client(),
+        client=FlowerClient(cid=CLIENT_ID, model_type="taskA").to_client(),
     )
