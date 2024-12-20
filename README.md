@@ -1,6 +1,6 @@
 ---
 framework: [Flower, PyTorch, Torchvision]
-dataset: [CIFAR-10]
+dataset: [CIFAR-10, FMNIST]
 model: [Convolutional Neural Network]
 version: [1.0.0]
 ---
