@@ -22,29 +22,13 @@ version: [1.0.0]
 
 # Table of contents
 <!--ts-->
-   * [Abstract](#abstract)
    * [Package Structure](#packagestructure)
    * [Prerequisites](#prerequisites)
    * [How to Run](#how-to-run)
    * [Architectural Patterns](#architecturalpatterns)
    * [References](#references)
    
-# Abstract
-
-_Context._ Designing Federated Learning systems is not trivial, as it requires managing heterogeneous and distributed clients' resources, while balancing data privacy and system efficiency. 
-Architectural patterns have been recently specified in the literature to showcase reusable solutions to common problems within Federated Learning systems. 
-However, patterns often lead to both benefits and drawbacks, e.g., introducing a message compressor algorithm may reduce the system communication time, but it may produce additional computational costs for clients' devices. 
-
-_Objective._ The goal of this paper is to quantitatively investigate the performance impact of applying a selected set of architectural patterns when designing Federated Learning systems, thus providing evidence of their pros and cons.
-
-_Method._ We develop an open source environment by extending the well-established Flower framework; it integrates the implementation of four architectural patterns and evaluates their performance characteristics.
-
-_Results._ Experimental results assess that architectural patterns indeed bring performance gains and pains, as raised by the practitioners in the literature. Our framework can support software architects in making informed design choices when designing Federated Learning systems.
-
 # Package Structure
-
-
-
 
 The structure of this package is organized as follow:
 
@@ -86,6 +70,7 @@ The 4 Architectural Patterns proposed in [1] and implemented in our framework ar
 
 | Architectural Pattern | Pattern Category | Description | Link |
 | --- | --- | --- | --- |
+| **Client Registry** | `Client Management` | A registry to store relevant information of each client device participating in Federated Learning rounds. | - |
 | **Client Selector** | `Client Management` | A mechanism to dynamically select clients based on specific criteria, such as data distribution, device capabilities, or network conditions, to optimize the federated learning process. | [Link](1.%20Client%20Selector) |
 | **Client Cluster** | `Client Management` | A strategy to group clients into clusters based on shared characteristics, such as data similarity or device attributes, improving model accuracy and convergence in non-IID data scenarios. | [Link](1.%20Client%20Cluster) |
 | **Message Compressor** | `Model Management` | A component designed to reduce the size of data exchanged between clients and the server by compressing messages, which lowers communication latency and bandwidth usage in federated learning environments. | [Link](1.%20Message%20Compressor) |
