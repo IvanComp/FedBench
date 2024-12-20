@@ -12,36 +12,21 @@ version: [1.0.0]
 </p>
 <img src="https://img.shields.io/badge/version-1.0-green" alt="Version">
 
-<tt>AP4FED</tt> is a Federated Learning Benchmark platform built on top of the [Flower](https://github.com/adap/flower) an open-source Python library that simplifies building Federated Learning systems. It enables the definition of customized Federated Learning system configurations by leveraging architectural patterns [1], aiming to extract and analyze system performance metrics.
+<tt>AP4FED</tt> is a Federated Learning Benchmark platform built on top of the [Flower](https://github.com/adap/flower) an open-source Python library that simplifies building Federated Learning systems. It enables the definition of customized Federated Learning system configurations by leveraging architectural patterns [2], aiming to extract and analyze system performance metrics.
 
 <tt>AP4FED</tt> supports software architects by offering a framework for the quantitative evaluation of specific design decisions, enabling a deeper understanding of their impact on system performance and guiding the optimization of Federated Learning architectures.
 
-<tt>AP4FED</tt> was utilized in the paper "_Performance Analysis of Architectural Patterns for Federated Learning Systems_" accepted for the 22nd IEEE International Conference on Software Architecture (ICSA 2025) [2].
+<tt>AP4FED</tt> was utilized in the paper "_Performance Analysis of Architectural Patterns for Federated Learning Systems_" accepted for the 22nd IEEE International Conference on Software Architecture (ICSA 2025) [1].
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14039470.svg)](https://zenodo.org/uploads/14039470)
 
 # Table of contents
 <!--ts-->
-   * [Package Structure](#packagestructure)
    * [Prerequisites](#prerequisites)
    * [How to Run](#how-to-run)
    * [Architectural Patterns](#architecturalpatterns)
    * [References](#references)
    
-# Package Structure
-
-The structure of this package is organized as follow:
-
-```bash
-$ tree .
-.
-├── /1. Client Selector      # <-- contains `Client Selector` experiments
-├── /2. Client Clustering    # <-- contains `Client Cluster` experiments
-├── /3. Message Compressor   # <-- contains `Message Compressor` experiments
-├── Experiments Results      # <-- contains 3 jupyter notebooks for the visualizaiton of the results
-└── README.md                # <-- README file
-```
-
 # Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/)
@@ -60,13 +45,10 @@ docker compose version
 
 # How To Run
 
-To run a Federated Learning project, please refer to the README file located within the folder of the correspective architectural pattern.
-
-Istructions to run the experiments for each architectural pattern, are reported in the README  by clicking the corresponding link in the next [section](#architectural-patterns) or by navigating directly to the folder of the specific architectural pattern.
 
 # Architectural Patterns
 
-The 4 Architectural Patterns proposed in [1] and implemented in our framework are:
+The Architectural Patterns ([2]) implemented in our framework are:
 
 | Architectural Pattern | Pattern Category | Description | Link |
 | --- | --- | --- | --- |
@@ -88,6 +70,9 @@ The **Client Registry** architectural pattern is implemented by adding the follo
 
 # References
 
-[1] Sin Kit Lo, Qinghua Lu, Liming Zhu, Hye-Young Paik, Xiwei Xu, Chen Wang,
+[1] Compagnucci, I., Pinciroli, R., & Trubiani, C. (2025). **Performance Analysis of Architectural Patterns for Federated Learning Systems.**
+Accepted for the 22nd IEEE International Conference on Software Architecture. ICSA 2025.
+
+[2] Sin Kit Lo, Qinghua Lu, Liming Zhu, Hye-Young Paik, Xiwei Xu, Chen Wang,
 **Architectural patterns for the design of federated learning systems**,
 Journal of Systems and Software, Volume 191, 2022, 111357.
