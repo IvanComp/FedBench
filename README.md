@@ -5,18 +5,20 @@ model: [Convolutional Neural Network]
 version: [1.0.0]
 ---
 
-# Open Science Artifact: Performance Analysis of Architectural Patterns for Federated Learning Systems
+# AP4FED
 
 <p align="center">
 <img src="img/logoNew2.svg" width="340px" height="210px"/>
 </p>
 <img src="https://img.shields.io/badge/version-1.0-green" alt="Version">
 
+<tt>AP4FED</tt> is a Federated Learning Benchmark platform built on top of the [Flower](https://github.com/adap/flower) an open-source Python library that simplifies building Federated Learning systems. It enables the definition of customized Federated Learning system configurations by leveraging architectural patterns [1], aiming to extract and analyze system performance metrics.
+
+<tt>AP4FED</tt> supports software architects by offering a framework for the quantitative evaluation of specific design decisions, enabling a deeper understanding of their impact on system performance and guiding the optimization of Federated Learning architectures.
+
+<tt>AP4FED</tt> was utilized in the paper "_Performance Analysis of Architectural Patterns for Federated Learning Systems_" accepted for the 22nd IEEE International Conference on Software Architecture (ICSA 2025) [2].
+
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14039470.svg)](https://zenodo.org/uploads/14039470)
-
-This Open Science Artifact contains <tt>AP4FED</tt>, a Federated Learning platform built on top of the [Flower](https://github.com/adap/flower) an open-source Python library that simplifies building Federated Learning systems.
-
-This platform was utilized in the paper "_Performance Analysis of Architectural Patterns for Federated Learning Systems_" for the 22nd IEEE International Conference on Software Architecture (ICSA 2025).
 
 # Table of contents
 <!--ts-->
