@@ -29,10 +29,11 @@ version: [1.0.0]
    
 # Prerequisites
 
+- [Python (version 3.9.X or higher)](https://www.python.org/downloads/) 
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose (version v2.29.2 or higher)](https://docs.docker.com/compose/install/)
 
-Make sure to have Docker and Docker Compose installed on your system to run this project.
+Docker and Docker Compose are not strictly required to run Federated Learning projects, but they are valuable tools for configurations that emulate real clients, particularly by distributing physical resources such as CPUs while avoiding CPU overcommitment. The framework allows flexibility between running a fully containerized setup or opting for a local simulation, depending on the project’s requirements and the desired level of fidelity in emulating a distributed system.
 
 - **Docker**: Required to create and run containers.
 - **Docker Compose**: Enables running multi-container applications with Docker using the `docker-compose.yml` file.
@@ -45,6 +46,12 @@ docker compose version
 
 # How To Run
 
+In the main folder run the following command:
+
+```bash
+python home.py
+```
+Follow the instructions in the command, which will launch the <tt>AP4FED</tt>. This interface allows you to configure the Federated Learning system and proceed with benchmarking, providing a user-friendly way to manage and test the setup.
 
 # Architectural Patterns
 
