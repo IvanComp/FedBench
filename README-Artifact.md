@@ -1,6 +1,6 @@
 # Open Science Artifact: Performance Analysis of Architectural Patterns for Federated Learning Systems
 
-The open science artifact for the paper “Performance Analysis of Architectural Patterns for Federated Learning Systems,” accepted at the 22nd IEEE International Conference on Software Architecture (ICSA 2025), including Python scripts and results from the analysis is available at the following Zenodo repository:
+This is the open science artifact for the paper “Performance Analysis of Architectural Patterns for Federated Learning Systems,” accepted at the 22nd IEEE International Conference on Software Architecture (ICSA 2025). Scripts and results for the analysis are available at the following Zenodo repository:
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14039470.svg)](https://zenodo.org/uploads/14039470)
 
@@ -33,7 +33,7 @@ The structure of the Zenodo package is organized as follows:
 
 # Prerequisites
 
-The experiments are designed to ensure accessibility and reproducibility, requiring only Docker to run experiments for extract performance metrics within a controlled and isolated environment.
+The experiments are designed to ensure accessibility and reproducibility, Docker is required to run experiments and to extract performance metrics within a controlled and isolated environment.
 
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose (version v2.29.2 or higher)](https://docs.docker.com/compose/install/)
