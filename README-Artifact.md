@@ -121,7 +121,7 @@ NUM_ROUNDS=10 docker-compose up --scale clienthigh=3 --scale clientlow=1
    <br> Note that **different values may be observed because of the stochastic nature of the simulation**. 
 
 
-### How to run Custom Experiments
+### How to run Custom Experiments (Client Selector)
 
 Users can also customize input parameters to investigate the architectural pattern performance considering different settings.
 All of the input parameters can be varied by changing the corresponding values from the command line before starting the project, For example:
@@ -135,14 +135,7 @@ NUM_ROUNDS=50 docker-compose up --scale clienthigh=15 --scale clientlow=5
 
 This folder contains scripts for running experiments with and without applying the Client Cluster architectural pattern.
 
-It is possible to replicate the same experiments proposed in the paper or run the experiments by considering different input parameters (see [below](#how-to-run-custom-experiments)).
-
-```bash
-$ tree .
-.
-├── /1. With Client Cluster  
-├── /2. Without Client Cluster      
-```
+It is possible to replicate the same experiments proposed in the paper or run the experiments by considering different input parameters (see [below](#how-to-run-custom-experiments-cc)).
 
 ### Input Parameters
 
@@ -185,7 +178,7 @@ NUM_ROUNDS=10 docker-compose up --scale clienta=6 --scale clientb=2
 4. The process of Federated Learning will start, and the progress of each round will be displayed in the terminal.
    <br> Note that **different values may be observed because of the stochastic nature of the simulation**. 
 
-### How to run Custom Experiments
+### How to run Custom Experiments (Client Cluster)
 
 Users can also customize input parameters to investigate the architectural pattern performance considering different settings.
 All of the input parameters can be varied by changing the corresponding values from the command line before starting the project, For example:
@@ -201,7 +194,7 @@ Note that changing CPU and RAM parameters requires access to the docker-compose 
 
 This folder contains scripts for running experiments with and without applying the Message COmpressor architectural pattern.
 
-It is possible to replicate the same experiments proposed in the paper or run the experiments by considering different input parameters (see [below](#how-to-run-custom-experiments)).
+It is possible to replicate the same experiments proposed in the paper or run the experiments by considering different input parameters (see [below](#how-to-run-custom-experiments-(message-compressor)).
 
 ### Input Parameters
 
@@ -254,7 +247,7 @@ NUM_ROUNDS=10 docker-compose up --scale client=8
    <br> Note that **different values may be observed because of the stochastic nature of the simulation**. 
 
 
-### How to run Custom Experiments
+### How to run Custom Experiments (Message Compressor)
 
 Users can also customize input parameters to investigate the architectural pattern performance considering different settings.
 All of the input parameters can be varied by changing the corresponding values from the command line before starting the project, For example:
