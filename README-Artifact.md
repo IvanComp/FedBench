@@ -73,11 +73,9 @@ docker compose version
 
 # How To Run
 
-Three distinct types of experiments can be conducted, each focusing on a different architectural pattern.
+## /1. Client Selector
 
-## 1. Client Selector Architectural Pattern
-
-This folder contains scripts, data, and [experimental results](https://github.com/IvanComp/AP4Fed/blob/main/Experiments%20Results/1ClientSelector.ipynb) of the Client Selector architectural pattern.
+This folder contains scripts for running experiments with and without applying the Client Selector architectural pattern.
 
 It is possible to replicate the same experiments proposed in the paper or run the experiments by considering different input parameters (see [section](#how-to-run-custom-experiments)).
 
@@ -133,11 +131,9 @@ All of the input parameters can be varied by changing the corresponding values f
 NUM_ROUNDS=50 docker-compose up --scale clienthigh=15 --scale clientlow=5
 ```
 
-## 2. Client Cluster
+## /2. Client Cluster
 
-# Client Cluster Architectural Pattern
-
-This folder contains scripts, data, and [experimental results](https://github.com/IvanComp/AP4Fed/blob/main/Experiments%20Results/2ClientCluster.ipynb) of the Client Cluster architectural pattern.
+This folder contains scripts for running experiments with and without applying the Client Cluster architectural pattern.
 
 It is possible to replicate the same experiments proposed in the paper or run the experiments by considering different input parameters (see [section](#how-to-run-custom-experiments)).
 
@@ -189,7 +185,6 @@ NUM_ROUNDS=10 docker-compose up --scale clienta=6 --scale clientb=2
 4. The process of Federated Learning will start, and the progress of each round will be displayed in the terminal.
    <br> Note that **different values may be observed because of the stochastic nature of the simulation**. 
 
-
 ### How to run Custom Experiments
 
 Users can also customize input parameters to investigate the architectural pattern performance considering different settings.
@@ -202,18 +197,11 @@ NUM_ROUNDS=50 docker-compose up --scale clienta=15 --scale clientb=5
 
 Note that changing CPU and RAM parameters requires access to the docker-compose file, where these settings can be manually adjusted.
 
-## 3. Message Compressor Architectural Pattern
+## /3. Message Compressor 
 
-This folder contains scripts, data, and [experimental results](https://github.com/IvanComp/AP4Fed/blob/main/Experiments%20Results/3MessageCompressor.ipynb) of the Message Compressor architectural pattern.
+This folder contains scripts for running experiments with and without applying the Message COmpressor architectural pattern.
 
 It is possible to replicate the same experiments proposed in the paper or run the experiments by considering different input parameters (see [section](#how-to-run-custom-experiments)).
-
-```bash
-$ tree .
-.
-├── /1. With Message Compressor 
-├── /2. Without Message Compressor      
-```
 
 ### Input Parameters
 
