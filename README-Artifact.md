@@ -1,10 +1,8 @@
 # Open Science Artifact: Performance Analysis of Architectural Patterns for Federated Learning Systems
 
-The replication package for the open science artifact: "Performance Analysis of Architectural Patterns for Federated Learning Systems" can be found in the following Zenodo repository: 
+The open science artifact for the paper “Performance Analysis of Architectural Patterns for Federated Learning Systems,” accepted at the 22nd IEEE International Conference on Software Architecture (ICSA 2025), including Python scripts and results from the analysis is available at the following Zenodo repository:
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14039470.svg)](https://zenodo.org/uploads/14039470)
- 
-It contains the Python scripts and results of the architectural patterns analyzed in the paper "Performance Analysis of Architectural Patterns for Federated Learning Systems" accepted for publication in the 22nd IEEE International Conference on Software Architecture (ICSA 2025). 
 
 # Table of contents
 <!--ts-->
