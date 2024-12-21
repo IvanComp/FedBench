@@ -8,30 +8,10 @@ It contains the Python scripts and results of the architectural patterns analyze
 
 # Table of contents
 <!--ts-->
-   * [Authors](#authors)
-   * [Abstract](#abstract)
    * [Zenodo Package Structure](#zenodo-package-structure)
    * [Prerequisites](#prerequisites)
    * [How to Run](#how-to-run)
-   
-# Authors
-
-Ivan Compagnucci (Gran Sasso Science Institute), Italy
-
-Riccardo Pinciroli (Zimmer Biomet), Italy
-
-Catia Trubiani (Gran Sasso Science Institute), Italy
-
-# Abstract
-
-**Context:** Designing Federated Learning systems is not trivial, as it requires managing heterogeneous and distributed clients' resources, while balancing data privacy and system efficiency. Architectural patterns have been recently specified in the literature to showcase reusable solutions to common problems within Federated Learning systems. However, patterns often lead to both benefits and drawbacks, e.g., introducing a message compressor algorithm may reduce the system communication time, but it may produce additional computational costs for clients' devices. 
-
-**Objective:** The goal of this paper is to quantitatively investigate the performance impact of applying a selected set of architectural patterns when designing Federated Learning systems, thus providing evidence of their pros and cons. 
-
-**Method:** We develop an open source environment by extending the well-established Flower framework; it integrates the implementation of four architectural patterns and evaluates their performance characteristics. 
-
-**Results:** Experimental results assess that architectural patterns indeed bring performance gains and pains, as raised by the practitioners in the literature. Our framework can support software architects in making informed design choices when designing Federated Learning systems.
-
+  
 # Zenodo Package Structure
 
 The structure of the Zenodo package is organized as follows:
