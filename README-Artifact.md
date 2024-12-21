@@ -1,49 +1,55 @@
 # Open Science Artifact: Performance Analysis of Architectural Patterns for Federated Learning Systems
 
+The replication package of the open science artifact: "Performance Analysis of Architectural Patterns for Federated Learning Systems" can be found in the following Zenodo repository: 
+
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14039470.svg)](https://zenodo.org/uploads/14039470)
-
-The replication packa can be found in the following zenodo repository: 
  
-package contains scripts and results of the architectural patterns analyzed in the paper "Performance Analysis of Architectural Patterns for Federated Learning Systems" accepted for publication in the 22nd IEEE International Conference on Software Architecture (ICSA 2025). 
-
-<tt>AP4FED</tt> is a Federated Learning Benchmark platform built on top of the [Flower](https://github.com/adap/flower) an open-source Python library that simplifies building Federated Learning systems. It enables the definition of customized Federated Learning system configurations by leveraging architectural patterns [1], aiming to extract and analyze system performance metrics.
-
-<tt>AP4FED</tt> supports software architects by offering a framework for the quantitative evaluation of specific design decisions, enabling a deeper understanding of their impact on system performance and guiding the optimization of Federated Learning architectures.
-
-<tt>AP4FED</tt> was utilized in the paper "_Performance Analysis of Architectural Patterns for Federated Learning Systems_" accepted for the 22nd IEEE International Conference on Software Architecture (ICSA 2025) [2].
+It contains the Python scripts and results of the architectural patterns analyzed in the paper "Performance Analysis of Architectural Patterns for Federated Learning Systems" accepted for publication in the 22nd IEEE International Conference on Software Architecture (ICSA 2025). 
 
 # Table of contents
 <!--ts-->
    * [Authors](#authors)
    * [Abstract](#abstract)
-   * [Zenodo Package Structure](#zenodopackagestructure)
-   * [Available Files](#availablefiles)
+   * [Zenodo Package Structure](#zenodo-package-structure)
    * [Prerequisites](#prerequisites)
    * [How to Run](#how-to-run)
    
 # Authors
 
 Ivan Compagnucci (Gran Sasso Science Institute), Italy
+
 Riccardo Pinciroli (Zimmer Biomet), Italy
+
 Catia Trubiani (Gran Sasso Science Institute), Italy
 
 # Abstract
 
 **Context:** Designing Federated Learning systems is not trivial, as it requires managing heterogeneous and distributed clients' resources, while balancing data privacy and system efficiency. Architectural patterns have been recently specified in the literature to showcase reusable solutions to common problems within Federated Learning systems. However, patterns often lead to both benefits and drawbacks, e.g., introducing a message compressor algorithm may reduce the system communication time, but it may produce additional computational costs for clients' devices. 
+
 **Objective:** The goal of this paper is to quantitatively investigate the performance impact of applying a selected set of architectural patterns when designing Federated Learning systems, thus providing evidence of their pros and cons. 
-**Method:** We develop an open source environment by extending the well-established Flower framework; it integrates the implementation of four architectural patterns and evaluates their performance characteristics. **Results:** Experimental results assess that architectural patterns indeed bring performance gains and pains, as raised by the practitioners in the literature. Our framework can support software architects in making informed design choices when designing Federated Learning systems.
+
+**Method:** We develop an open source environment by extending the well-established Flower framework; it integrates the implementation of four architectural patterns and evaluates their performance characteristics. 
+
+**Results:** Experimental results assess that architectural patterns indeed bring performance gains and pains, as raised by the practitioners in the literature. Our framework can support software architects in making informed design choices when designing Federated Learning systems.
 
 # Zenodo Package Structure
 
-The structure of this package is organized as follow:
+The structure of the Zenodo package is organized as follows:
 
 ```bash
-├── /1. Client Selector      # <-- contains `Client Selector` experiments
-├── /2. Client Clustering    # <-- contains `Client Cluster` experiments
-├── /3. Message Compressor   # <-- contains `Message Compressor` experiments
-├── Experiments-Results.xlsx      # <-- contains experiments results proposed in the paper
-└── README.md                # <-- README file
+├── /1. Client Selector
+│   ├── /With Client Selector                # <-- contains the script for running experiments without applying the `Client Selector` pattern
+│   └── /Without Client Selector             # <-- contains the script for running experiments with the `Client Selector` pattern`
+├── /2. Client Clustering
+│   ├── /With Client Cluster                 # <-- contains the script for running experiments without applying the `Client Cluster` pattern
+│   └── /Without Client Cluster              # <-- contains the script for running experiments applying the `Client Cluster` pattern
+├── /3. Message Compressor
+│   ├── /With Message Compressor             # <-- contains the script for running experiments without applying the `Message Compressor` pattern
+│   └── /Without Message Compressor          # <-- contains the script for running experiments applying the `Message Compressor` pattern
+├── /Experiments-Results.xlsx
+└── README.md                     # <-- Main README file
 ```
+Refer to the [How to Run](#how-to-run) section 
 
 # Prerequisites
 
@@ -63,28 +69,6 @@ docker --version
 docker compose version
 ```
 
-# Architectural Patterns
-
-The 4 Architectural Patterns proposed in [1] and implemented in our framework are:
-
-| Architectural Pattern | Pattern Category | Description | 
-| --- | --- | --- | 
-| **Client Selector** | `Client Management` | A mechanism to dynamically select clients based on specific criteria, such as data distribution, device capabilities, or network conditions, to optimize the federated learning process. |
-| **Client Cluster** | `Client Management` | A strategy to group clients into clusters based on shared characteristics, such as data similarity or device attributes, improving model accuracy and convergence in non-IID data scenarios. | 
-| **Message Compressor** | `Model Management` | A component designed to reduce the size of data exchanged between clients and the server by compressing messages, which lowers communication latency and bandwidth usage in federated learning environments. | 
-
-The **Client Registry** architectural pattern is implemented by adding the following parameters:
-
-| Attribute | Data Type | Description |
-| --- | --- | --- | 
-| **cID** | `string` | Client’s Unique Identifier | 
-| **cluster_Type** | `string` | Cluster associated to the Client | 
-| **n_CPU** | `int` | Number of Client’s CPU | 
-| **training_time** | `float` | Client’s Training Time | 
-| **communication_time** | `float` | Client’s Communication Time | 
-| **total_round_time** | `float` | Client’s Total Round Time | 
-
-
 # How To Run
 
 Three distinct types of experiments can be conducted, each focusing on a different architectural pattern.
@@ -94,13 +78,6 @@ Three distinct types of experiments can be conducted, each focusing on a differe
 This folder contains scripts, data, and [experimental results](https://github.com/IvanComp/AP4Fed/blob/main/Experiments%20Results/1ClientSelector.ipynb) of the Client Selector architectural pattern.
 
 It is possible to replicate the same experiments proposed in the paper or run the experiments by considering different input parameters (see [section](#how-to-run-custom-experiments)).
-
-```bash
-$ tree .
-.
-├── /With Client Selector  
-├── /Without Client Selector      
-```
 
 ### Input Parameters
 
@@ -153,9 +130,6 @@ All of the input parameters can be varied by changing the corresponding values f
 # Custom Configuration:
 NUM_ROUNDS=50 docker-compose up --scale clienthigh=15 --scale clientlow=5
 ```
-
-Note that changing CPU and RAM parameters requires access to the docker-compose file, where these settings can be manually adjusted.
-
 
 ## 2. Client Cluster
 
