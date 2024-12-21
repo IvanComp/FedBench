@@ -77,7 +77,7 @@ docker compose version
 
 This folder contains scripts for running experiments with and without applying the Client Selector architectural pattern.
 
-It is possible to replicate the same experiments proposed in the paper or run the experiments by considering different input parameters (see [section](#how-to-run-custom-experiments)).
+It is possible to replicate the same experiments proposed in the paper or run the experiments by considering different input parameters (see [below](#how-to-run-custom-experiments)).
 
 ### Input Parameters
 
@@ -135,7 +135,7 @@ NUM_ROUNDS=50 docker-compose up --scale clienthigh=15 --scale clientlow=5
 
 This folder contains scripts for running experiments with and without applying the Client Cluster architectural pattern.
 
-It is possible to replicate the same experiments proposed in the paper or run the experiments by considering different input parameters (see [section](#how-to-run-custom-experiments)).
+It is possible to replicate the same experiments proposed in the paper or run the experiments by considering different input parameters (see [below](#how-to-run-custom-experiments)).
 
 ```bash
 $ tree .
@@ -201,7 +201,7 @@ Note that changing CPU and RAM parameters requires access to the docker-compose 
 
 This folder contains scripts for running experiments with and without applying the Message COmpressor architectural pattern.
 
-It is possible to replicate the same experiments proposed in the paper or run the experiments by considering different input parameters (see [section](#how-to-run-custom-experiments)).
+It is possible to replicate the same experiments proposed in the paper or run the experiments by considering different input parameters (see [below](#how-to-run-custom-experiments)).
 
 ### Input Parameters
 
