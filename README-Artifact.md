@@ -1,6 +1,6 @@
 # Open Science Artifact: Performance Analysis of Architectural Patterns for Federated Learning Systems
 
-The replication package of the open science artifact: "Performance Analysis of Architectural Patterns for Federated Learning Systems" can be found in the following Zenodo repository: 
+The replication package for the open science artifact: "Performance Analysis of Architectural Patterns for Federated Learning Systems" can be found in the following Zenodo repository: 
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14039470.svg)](https://zenodo.org/uploads/14039470)
  
@@ -50,7 +50,7 @@ The structure of the Zenodo package is organized as follows:
 │   ├── 1ClientSelector.ipynb       # <-- contains the jupyter notebook for generating the resulting graphs applying the `Client Selector` pattern
 │   ├── 2ClientCluster.ipynb        # <-- contains the jupyter notebook for generating the resulting graphs applying the `Client Cluster` pattern
 │   └── 3MessageCompressor.ipynb    # <-- contains the jupyter notebook for generating the resulting graphs applying the `Message Compressor` pattern
-└── Experiments-Results.xlsx
+└── Experiments-Results.xlsx        # <-- contains an .xlsx which summarizes the results of the experiments presented in the paper
 ```
 
 # Prerequisites
