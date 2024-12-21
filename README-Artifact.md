@@ -47,9 +47,9 @@ The structure of the Zenodo package is organized as follows:
 │   ├── /With Message Compressor          # <-- contains the script for running experiments without applying the `Message Compressor` pattern
 │   └── /Without Message Compressor       # <-- contains the script for running experiments applying the `Message Compressor` pattern
 ├── /Jupyter Notebooks
-│   ├── 1.ClientSelector.ipynb       # <-- contains the jupyter notebook for generating the resulting graphs applying the `Client Selector` pattern
-|   ├── 2.ClientCluster.ipynb        # <-- contains the jupyter notebook for generating the resulting graphs applying the `Client Cluster` pattern
-│   └── 3.MessageCompressor.ipynb    # <-- contains the jupyter notebook for generating the resulting graphs applying the `Message Compressor` pattern
+│   ├── 1ClientSelector.ipynb       # <-- contains the jupyter notebook for generating the resulting graphs applying the `Client Selector` pattern
+│   ├── 2ClientCluster.ipynb        # <-- contains the jupyter notebook for generating the resulting graphs applying the `Client Cluster` pattern
+│   └── 3MessageCompressor.ipynb    # <-- contains the jupyter notebook for generating the resulting graphs applying the `Message Compressor` pattern
 └── Experiments-Results.xlsx
 ```
 
