@@ -38,18 +38,20 @@ The structure of the Zenodo package is organized as follows:
 
 ```bash
 ├── /1. Client Selector
-│   ├── /With Client Selector                # <-- contains the script for running experiments without applying the `Client Selector` pattern
-│   └── /Without Client Selector             # <-- contains the script for running experiments with the `Client Selector` pattern`
+│   ├── /With Client Selector             # <-- contains the script for running experiments without applying the `Client Selector` pattern
+│   └── /Without Client Selector          # <-- contains the script for running experiments with the `Client Selector` pattern`
 ├── /2. Client Clustering
-│   ├── /With Client Cluster                 # <-- contains the script for running experiments without applying the `Client Cluster` pattern
-│   └── /Without Client Cluster              # <-- contains the script for running experiments applying the `Client Cluster` pattern
+│   ├── /With Client Cluster              # <-- contains the script for running experiments without applying the `Client Cluster` pattern
+│   └── /Without Client Cluster           # <-- contains the script for running experiments applying the `Client Cluster` pattern
 ├── /3. Message Compressor
-│   ├── /With Message Compressor             # <-- contains the script for running experiments without applying the `Message Compressor` pattern
-│   └── /Without Message Compressor          # <-- contains the script for running experiments applying the `Message Compressor` pattern
-├── /Experiments-Results.xlsx
-└── README.md                     # <-- Main README file
+│   ├── /With Message Compressor          # <-- contains the script for running experiments without applying the `Message Compressor` pattern
+│   └── /Without Message Compressor       # <-- contains the script for running experiments applying the `Message Compressor` pattern
+├── /Jupyter Notebooks
+│   ├── 1.ClientSelector.ipynb       # <-- contains the jupyter notebook for generating the resulting graphs applying the `Client Selector` pattern
+|   ├── 2.ClientCluster.ipynb        # <-- contains the jupyter notebook for generating the resulting graphs applying the `Client Cluster` pattern
+│   └── 3.MessageCompressor.ipynb    # <-- contains the jupyter notebook for generating the resulting graphs applying the `Message Compressor` pattern
+└── Experiments-Results.xlsx
 ```
-Refer to the [How to Run](#how-to-run) section 
 
 # Prerequisites
 
